@@ -129,4 +129,42 @@ describe("ensureDefaultWorkspaceForCustomer", () => {
       role: "owner"
     });
   });
+
+  it("re-reads the active membership when concurrent creation hits a unique slug conflict", async () => {
+    const workspace = {
+      id: "workspace_existing",
+      name: "Acme Inc",
+      type: "individual",
+      status: "active"
+    };
+    const membership = {
+      id: "member_existing",
+      customerId: customer.id,
+      workspaceId: workspace.id,
+      role: "owner",
+      status: "active",
+      workspace
+    };
+    let findFirstCount = 0;
+    const prisma = {
+      workspaceMember: {
+        findFirst() {
+          findFirstCount += 1;
+          return findFirstCount === 1 ? null : membership;
+        }
+      },
+      workspace: {
+        create() {
+          const error = new Error("Unique constraint failed on the fields: (`slug`)");
+          Object.assign(error, { code: "P2002" });
+          throw error;
+        }
+      }
+    } as unknown as PrismaClient;
+
+    const result = await ensureDefaultWorkspaceForCustomer(prisma, customer);
+
+    expect(findFirstCount).toBe(2);
+    expect(result).toEqual({ workspace, membership });
+  });
 });
