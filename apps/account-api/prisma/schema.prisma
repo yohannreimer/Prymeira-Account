@@ -76,6 +76,8 @@ model Subscription {
   updatedAt             DateTime  @updatedAt @map("updated_at")
   customer              Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
+  @@unique([gateway, gatewaySubscriptionId])
+  @@index([customerId])
   @@map("subscriptions")
 }
 
@@ -89,5 +91,7 @@ model AuditLog {
   after            Json?
   createdAt        DateTime @default(now()) @map("created_at")
 
+  @@index([targetType, targetId, createdAt])
+  @@index([actorClerkUserId, createdAt])
   @@map("audit_logs")
 }
