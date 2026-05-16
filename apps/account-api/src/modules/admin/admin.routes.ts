@@ -58,8 +58,12 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       }
     });
 
+    const auditTargetIds = [
+      params.id,
+      ...(customer?.entitlements.map((entitlement) => entitlement.id) ?? [])
+    ];
     const audit_logs = await app.prisma.auditLog.findMany({
-      where: { targetId: params.id },
+      where: { targetId: { in: auditTargetIds } },
       orderBy: { createdAt: "desc" },
       take: 25
     });
@@ -70,21 +74,41 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
   app.post("/admin/entitlements", async (request) => {
     const user = await requireAdmin(request.headers.authorization);
     const input = upsertEntitlementSchema.parse(request.body);
+    const toNullableDate = (value: string | null | undefined) =>
+      value == null ? null : new Date(value);
 
-    const entitlement = await upsertEntitlement(app.prisma, user, {
+    const entitlementInput: {
+      customerId: string;
+      productKey: string;
+      status: string;
+      plan: string;
+      source: string;
+      endsAt?: Date | null;
+      trialEndsAt?: Date | null;
+      currentPeriodEndsAt?: Date | null;
+      limits: Prisma.InputJsonValue;
+      metadata: Prisma.InputJsonValue;
+    } = {
       customerId: input.customer_id,
       productKey: input.product_key,
       status: input.status,
       plan: input.plan,
       source: input.source,
-      endsAt: input.ends_at ? new Date(input.ends_at) : null,
-      trialEndsAt: input.trial_ends_at ? new Date(input.trial_ends_at) : null,
-      currentPeriodEndsAt: input.current_period_ends_at
-        ? new Date(input.current_period_ends_at)
-        : null,
       limits: input.limits as Prisma.InputJsonValue,
       metadata: input.metadata as Prisma.InputJsonValue
-    });
+    };
+
+    if (Object.prototype.hasOwnProperty.call(input, "ends_at")) {
+      entitlementInput.endsAt = toNullableDate(input.ends_at);
+    }
+    if (Object.prototype.hasOwnProperty.call(input, "trial_ends_at")) {
+      entitlementInput.trialEndsAt = toNullableDate(input.trial_ends_at);
+    }
+    if (Object.prototype.hasOwnProperty.call(input, "current_period_ends_at")) {
+      entitlementInput.currentPeriodEndsAt = toNullableDate(input.current_period_ends_at);
+    }
+
+    const entitlement = await upsertEntitlement(app.prisma, user, entitlementInput);
 
     return { entitlement };
   });

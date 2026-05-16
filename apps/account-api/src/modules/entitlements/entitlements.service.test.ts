@@ -1,6 +1,11 @@
 import type { PrismaClient } from "@prisma/client";
 import { describe, expect, it } from "vitest";
-import { grantTrialEntitlement } from "./entitlements.service.js";
+import { ApiError } from "../../lib/errors.js";
+import {
+  blockEntitlement,
+  grantTrialEntitlement,
+  upsertEntitlement
+} from "./entitlements.service.js";
 
 const actor = {
   clerkUserId: "user_admin"
@@ -14,6 +19,19 @@ function prismaWithEntitlementMutation() {
   } = {};
 
   const prisma = {
+    $transaction<T>(callback: (tx: PrismaClient) => Promise<T>) {
+      return callback(prisma as unknown as PrismaClient);
+    },
+    customer: {
+      findUnique() {
+        return { id: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0" };
+      }
+    },
+    product: {
+      findUnique() {
+        return { productKey: "operis" };
+      }
+    },
     entitlement: {
       findUnique(args: unknown) {
         calls.findUnique = args;
@@ -73,11 +91,185 @@ describe("grantTrialEntitlement", () => {
     expect(calls.auditCreate).toMatchObject({
       data: {
         actorClerkUserId: "user_admin",
-        action: "entitlement.upsert",
+        action: "entitlement.trial_grant",
         targetType: "entitlement",
         targetId: "entitlement_123"
       }
     });
     expect(entitlement).toMatchObject({ id: "entitlement_123", status: "trial" });
+  });
+});
+
+describe("upsertEntitlement", () => {
+  it("runs validation, mutation, and audit creation in one transaction", async () => {
+    const operations: string[] = [];
+    const tx = {
+      customer: {
+        findUnique() {
+          operations.push("customer.findUnique");
+          return { id: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0" };
+        }
+      },
+      product: {
+        findUnique() {
+          operations.push("product.findUnique");
+          return { productKey: "operis" };
+        }
+      },
+      entitlement: {
+        findUnique() {
+          operations.push("entitlement.findUnique");
+          return null;
+        },
+        upsert() {
+          operations.push("entitlement.upsert");
+          return {
+            id: "entitlement_123",
+            customerId: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0",
+            productKey: "operis",
+            status: "active",
+            plan: "pro",
+            source: "admin"
+          };
+        }
+      },
+      auditLog: {
+        create() {
+          operations.push("auditLog.create");
+          throw new Error("audit failed");
+        }
+      }
+    } as unknown as PrismaClient;
+    const prisma = {
+      $transaction(callback: (transactionPrisma: PrismaClient) => Promise<unknown>) {
+        operations.push("transaction.begin");
+        return callback(tx);
+      }
+    } as unknown as PrismaClient;
+
+    await expect(
+      upsertEntitlement(prisma, actor, {
+        customerId: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0",
+        productKey: "operis",
+        status: "active",
+        plan: "pro",
+        source: "admin",
+        limits: {},
+        metadata: {}
+      })
+    ).rejects.toThrow("audit failed");
+
+    expect(operations).toEqual([
+      "transaction.begin",
+      "customer.findUnique",
+      "product.findUnique",
+      "entitlement.findUnique",
+      "entitlement.upsert",
+      "auditLog.create"
+    ]);
+  });
+
+  it("rejects missing customers before mutating entitlements", async () => {
+    const operations: string[] = [];
+    const tx = {
+      customer: {
+        findUnique() {
+          operations.push("customer.findUnique");
+          return null;
+        }
+      },
+      product: {
+        findUnique() {
+          operations.push("product.findUnique");
+          return { productKey: "operis" };
+        }
+      },
+      entitlement: {
+        upsert() {
+          operations.push("entitlement.upsert");
+          return {};
+        }
+      }
+    } as unknown as PrismaClient;
+    const prisma = {
+      $transaction(callback: (transactionPrisma: PrismaClient) => Promise<unknown>) {
+        return callback(tx);
+      }
+    } as unknown as PrismaClient;
+
+    await expect(
+      upsertEntitlement(prisma, actor, {
+        customerId: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0",
+        productKey: "operis",
+        status: "active",
+        plan: "pro",
+        source: "admin",
+        limits: {},
+        metadata: {}
+      })
+    ).rejects.toEqual(new ApiError(404, "NOT_FOUND", "Customer not found."));
+
+    expect(operations).toEqual(["customer.findUnique"]);
+  });
+
+  it("rejects missing products before mutating entitlements", async () => {
+    const operations: string[] = [];
+    const tx = {
+      customer: {
+        findUnique() {
+          operations.push("customer.findUnique");
+          return { id: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0" };
+        }
+      },
+      product: {
+        findUnique() {
+          operations.push("product.findUnique");
+          return null;
+        }
+      },
+      entitlement: {
+        upsert() {
+          operations.push("entitlement.upsert");
+          return {};
+        }
+      }
+    } as unknown as PrismaClient;
+    const prisma = {
+      $transaction(callback: (transactionPrisma: PrismaClient) => Promise<unknown>) {
+        return callback(tx);
+      }
+    } as unknown as PrismaClient;
+
+    await expect(
+      upsertEntitlement(prisma, actor, {
+        customerId: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0",
+        productKey: "operis",
+        status: "active",
+        plan: "pro",
+        source: "admin",
+        limits: {},
+        metadata: {}
+      })
+    ).rejects.toEqual(new ApiError(404, "NOT_FOUND", "Product not found."));
+
+    expect(operations).toEqual(["customer.findUnique", "product.findUnique"]);
+  });
+});
+
+describe("blockEntitlement", () => {
+  it("uses a block-specific audit action", async () => {
+    const { prisma, calls } = prismaWithEntitlementMutation();
+
+    await blockEntitlement(prisma, actor, {
+      customerId: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0",
+      productKey: "operis",
+      reason: "chargeback"
+    });
+
+    expect(calls.auditCreate).toMatchObject({
+      data: {
+        action: "entitlement.block"
+      }
+    });
   });
 });

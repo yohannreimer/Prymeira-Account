@@ -1,4 +1,5 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
+import { ApiError } from "../../lib/errors.js";
 import { addDays } from "../../lib/time.js";
 
 type AuditActor = {
@@ -16,13 +17,26 @@ type UpsertEntitlementInput = {
   currentPeriodEndsAt?: Date | null;
   limits: Prisma.InputJsonValue;
   metadata: Prisma.InputJsonValue;
+  auditAction?: string;
 };
+
+type EntitlementPrisma = PrismaClient | Prisma.TransactionClient;
 
 export async function upsertEntitlement(
   prisma: PrismaClient,
   actor: AuditActor,
   input: UpsertEntitlementInput
 ) {
+  return prisma.$transaction((tx) => upsertEntitlementInTransaction(tx, actor, input));
+}
+
+async function upsertEntitlementInTransaction(
+  prisma: EntitlementPrisma,
+  actor: AuditActor,
+  input: UpsertEntitlementInput
+) {
+  await assertEntitlementTargetsExist(prisma, input);
+
   const where = {
     customerId_productKey: { customerId: input.customerId, productKey: input.productKey }
   };
@@ -60,7 +74,7 @@ export async function upsertEntitlement(
   await prisma.auditLog.create({
     data: {
       actorClerkUserId: actor.clerkUserId,
-      action: "entitlement.upsert",
+      action: input.auditAction ?? "entitlement.upsert",
       targetType: "entitlement",
       targetId: entitlement.id,
       ...(before ? { before: JSON.parse(JSON.stringify(before)) as Prisma.InputJsonValue } : {}),
@@ -69,6 +83,29 @@ export async function upsertEntitlement(
   });
 
   return entitlement;
+}
+
+async function assertEntitlementTargetsExist(
+  prisma: EntitlementPrisma,
+  input: Pick<UpsertEntitlementInput, "customerId" | "productKey">
+) {
+  const customer = await prisma.customer.findUnique({
+    where: { id: input.customerId },
+    select: { id: true }
+  });
+
+  if (!customer) {
+    throw new ApiError(404, "NOT_FOUND", "Customer not found.");
+  }
+
+  const product = await prisma.product.findUnique({
+    where: { productKey: input.productKey },
+    select: { productKey: true }
+  });
+
+  if (!product) {
+    throw new ApiError(404, "NOT_FOUND", "Product not found.");
+  }
 }
 
 export async function blockEntitlement(
@@ -86,7 +123,8 @@ export async function blockEntitlement(
     metadata: { reason: input.reason },
     endsAt: null,
     trialEndsAt: null,
-    currentPeriodEndsAt: null
+    currentPeriodEndsAt: null,
+    auditAction: "entitlement.block"
   });
 }
 
@@ -107,6 +145,7 @@ export async function grantTrialEntitlement(
     endsAt: null,
     currentPeriodEndsAt: null,
     limits: {},
-    metadata: { trial_days: input.trialDays }
+    metadata: { trial_days: input.trialDays },
+    auditAction: "entitlement.trial_grant"
   });
 }
