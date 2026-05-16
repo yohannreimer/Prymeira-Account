@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import type { PrismaClient } from "@prisma/client";
 import { ZodError } from "zod";
 import { loadEnv } from "./env.js";
 import { ApiError, sendApiError } from "./lib/errors.js";
@@ -17,6 +18,7 @@ declare module "fastify" {
 
 type BuildAppOptions = {
   authVerifier?: AuthVerifier;
+  prisma?: PrismaClient;
 };
 
 export async function buildApp(options: BuildAppOptions = {}) {
@@ -43,7 +45,10 @@ export async function buildApp(options: BuildAppOptions = {}) {
       callback(new Error("Origin is not allowed by CORS"), false);
     }
   });
-  await app.register(prismaPlugin);
+  await app.register(
+    prismaPlugin,
+    options.prisma ? { prisma: options.prisma, connect: false, disconnectOnClose: false } : {}
+  );
 
   app.decorate("authVerifier", options.authVerifier ?? createClerkAuthVerifier());
 

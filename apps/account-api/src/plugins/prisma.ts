@@ -7,13 +7,26 @@ declare module "fastify" {
   }
 }
 
-export const prismaPlugin = fp(async (app) => {
-  const prisma = new PrismaClient();
+type PrismaPluginOptions = {
+  prisma?: PrismaClient;
+  connect?: boolean;
+  disconnectOnClose?: boolean;
+};
+
+export const prismaPlugin = fp<PrismaPluginOptions>(async (app, options) => {
+  const prisma = options.prisma ?? new PrismaClient();
+  const connect = options.connect ?? true;
+  const disconnectOnClose = options.disconnectOnClose ?? true;
+
   app.decorate("prisma", prisma);
 
-  app.addHook("onClose", async () => {
-    await prisma.$disconnect();
-  });
+  if (disconnectOnClose) {
+    app.addHook("onClose", async () => {
+      await prisma.$disconnect();
+    });
+  }
 
-  await prisma.$connect();
+  if (connect) {
+    await prisma.$connect();
+  }
 });

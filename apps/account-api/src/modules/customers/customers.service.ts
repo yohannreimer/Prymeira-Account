@@ -15,18 +15,23 @@ export async function syncCustomer(
     throw new ApiError(403, "FORBIDDEN", "Cannot sync a different Clerk user.");
   }
 
-  const name = input.name ?? user.name ?? null;
+  if (input.email !== user.email) {
+    throw new ApiError(403, "FORBIDDEN", "Cannot sync a different email.");
+  }
+
+  const nextName = input.name ?? user.name;
+  const update = {
+    email: user.email,
+    ...(nextName !== undefined ? { name: nextName } : {})
+  };
 
   return prisma.customer.upsert({
     where: { clerkUserId: user.clerkUserId },
-    update: {
-      email: input.email,
-      name
-    },
+    update,
     create: {
       clerkUserId: user.clerkUserId,
-      email: input.email,
-      name
+      email: user.email,
+      name: nextName ?? null
     }
   });
 }
