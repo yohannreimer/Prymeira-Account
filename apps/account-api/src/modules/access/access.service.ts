@@ -49,13 +49,20 @@ export function evaluateEntitlementAccess(input: EvaluateAccessInput): AccessDec
     return deny(input.product.productKey, "locked", "no_product_seat", input.product.marketingUrl);
   }
 
+  if (
+    input.productSeat.workspaceId !== input.workspace.id ||
+    input.productSeat.productKey !== input.product.productKey
+  ) {
+    return deny(input.product.productKey, "locked", "no_product_seat", input.product.marketingUrl);
+  }
+
   if (!input.entitlement) {
     return deny(input.product.productKey, "locked", "no_entitlement", input.product.marketingUrl);
   }
 
   const entitlement = input.entitlement;
 
-  if (entitlement.productKey !== input.product.productKey) {
+  if (entitlement.workspaceId !== input.workspace.id || entitlement.productKey !== input.product.productKey) {
     return deny(input.product.productKey, "locked", "no_entitlement", input.product.marketingUrl);
   }
 

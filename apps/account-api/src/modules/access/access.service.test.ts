@@ -17,6 +17,9 @@ const workspace = {
 };
 
 const productSeat = {
+  workspaceId: "workspace-1",
+  customerId: "customer-1",
+  productKey: "operis",
   role: "admin",
   status: "active"
 };
@@ -125,6 +128,46 @@ describe("evaluateEntitlementAccess", () => {
       status: "locked",
       reason: "no_entitlement",
       upgrade_url: "https://primeiradigital.com.br/operis"
+    });
+  });
+
+  it("denies mismatched entitlement workspace against requested workspace", () => {
+    const result = evaluate({
+      entitlement: entitlement({ workspaceId: "foreign-workspace" })
+    });
+
+    expect(result).toEqual({
+      allowed: false,
+      product_key: "operis",
+      status: "locked",
+      reason: "no_entitlement",
+      upgrade_url: "https://primeiradigital.com.br/operis"
+    });
+  });
+
+  it("denies mismatched product seat workspace against requested workspace", () => {
+    const result = evaluate({
+      productSeat: { ...productSeat, workspaceId: "foreign-workspace" }
+    });
+
+    expect(result).toMatchObject({
+      allowed: false,
+      product_key: "operis",
+      status: "locked",
+      reason: "no_product_seat"
+    });
+  });
+
+  it("denies mismatched product seat product against requested product", () => {
+    const result = evaluate({
+      productSeat: { ...productSeat, productKey: "foreign-product" }
+    });
+
+    expect(result).toMatchObject({
+      allowed: false,
+      product_key: "operis",
+      status: "locked",
+      reason: "no_product_seat"
     });
   });
 

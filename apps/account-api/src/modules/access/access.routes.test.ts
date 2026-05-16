@@ -125,6 +125,9 @@ describe("accessRoutes", () => {
         findUnique(args: unknown) {
           calls.workspaceProductMemberFindUnique = args;
           return {
+            workspaceId,
+            customerId: customer.id,
+            productKey: "operis",
             role: "admin",
             status: "active"
           };
@@ -178,6 +181,89 @@ describe("accessRoutes", () => {
       seats_limit: 3,
       limits: { seats: 3 },
       reason: "active_entitlement"
+    });
+
+    await app.close();
+  });
+
+  it("denies access when the loaded product seat does not match workspace context", async () => {
+    const customer = {
+      id: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0",
+      email: "user@example.com",
+      name: "User"
+    };
+    const workspaceId = "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4";
+    const prisma = {
+      customer: {
+        findUnique() {
+          return customer;
+        }
+      },
+      product: {
+        findUnique() {
+          return {
+            productKey: "operis",
+            status: "active",
+            marketingUrl: "https://operis.example/upgrade"
+          };
+        }
+      },
+      workspaceMember: {
+        findFirst() {
+          return {
+            workspaceId,
+            role: "owner",
+            status: "active",
+            workspace: {
+              id: workspaceId,
+              name: "User Workspace",
+              type: "individual",
+              status: "active"
+            }
+          };
+        }
+      },
+      entitlement: {
+        findUnique() {
+          return {
+            workspaceId,
+            productKey: "operis",
+            status: "active",
+            plan: "pro",
+            source: "admin",
+            seatsLimit: 1,
+            endsAt: null,
+            trialEndsAt: null,
+            currentPeriodEndsAt: null,
+            limits: {}
+          };
+        }
+      },
+      workspaceProductMember: {
+        findUnique() {
+          return {
+            workspaceId: "313bb356-3c41-4fac-afb6-0af0ed330992",
+            customerId: customer.id,
+            productKey: "operis",
+            role: "admin",
+            status: "active"
+          };
+        }
+      }
+    } as unknown as PrismaClient;
+    const app = await buildApp({ authVerifier, prisma });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/access-check?product_key=operis",
+      headers: { authorization: "Bearer token" }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      allowed: false,
+      product_key: "operis",
+      reason: "no_product_seat"
     });
 
     await app.close();

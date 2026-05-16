@@ -218,10 +218,16 @@ function toAccessWorkspace(membership: WorkspaceMembershipWithWorkspace): Access
 }
 
 function toAccessProductSeat(productSeat: {
+  workspaceId: string;
+  customerId: string;
+  productKey: string;
   role: string;
   status: string;
 }): AccessProductSeat {
   return {
+    workspaceId: productSeat.workspaceId,
+    customerId: productSeat.customerId,
+    productKey: productSeat.productKey,
     role: productSeat.role,
     status: productSeat.status
   };

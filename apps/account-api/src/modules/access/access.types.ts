@@ -28,6 +28,9 @@ export type AccessWorkspace = {
 };
 
 export type AccessProductSeat = {
+  workspaceId: string;
+  customerId?: string;
+  productKey: string;
   role: string;
   status: string;
 };
