@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import { ApiError } from "../../lib/errors.js";
 import type { AuthenticatedUser } from "../auth/types.js";
+import { ensureDefaultWorkspaceForCustomer } from "../workspaces/workspaces.service.js";
 import type { z } from "zod";
 import type { syncCustomerSchema } from "./customers.schemas.js";
 
@@ -25,7 +26,7 @@ export async function syncCustomer(
     ...(nextName !== undefined ? { name: nextName } : {})
   };
 
-  return prisma.customer.upsert({
+  const customer = await prisma.customer.upsert({
     where: { clerkUserId: user.clerkUserId },
     update,
     create: {
@@ -34,6 +35,9 @@ export async function syncCustomer(
       name: nextName ?? null
     }
   });
+  const workspaceContext = await ensureDefaultWorkspaceForCustomer(prisma, customer);
+
+  return { customer, workspaceContext };
 }
 
 export async function findCustomerByClerkUserId(prisma: PrismaClient, clerkUserId: string) {

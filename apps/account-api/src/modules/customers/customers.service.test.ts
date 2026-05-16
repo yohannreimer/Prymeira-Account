@@ -13,6 +13,23 @@ function prismaWithUpsert(upsert: (args: unknown) => unknown): PrismaClient {
   return {
     customer: {
       upsert
+    },
+    workspaceMember: {
+      findFirst() {
+        return {
+          id: "member_123",
+          customerId: "customer_123",
+          workspaceId: "workspace_123",
+          role: "owner",
+          status: "active",
+          workspace: {
+            id: "workspace_123",
+            name: "User",
+            type: "individual",
+            status: "active"
+          }
+        };
+      }
     }
   } as unknown as PrismaClient;
 }
@@ -39,10 +56,10 @@ describe("syncCustomer", () => {
     let upsertArgs: unknown;
     const prisma = prismaWithUpsert((args) => {
       upsertArgs = args;
-      return { id: "customer_123" };
+      return { id: "customer_123", email: user.email, name: null };
     });
 
-    await syncCustomer(prisma, user, {
+    const result = await syncCustomer(prisma, user, {
       clerk_user_id: user.clerkUserId,
       email: user.email
     });
@@ -58,5 +75,8 @@ describe("syncCustomer", () => {
       }
     });
     expect((upsertArgs as { update: Record<string, unknown> }).update).not.toHaveProperty("name");
+    expect(result.customer.email).toBe(user.email);
+    expect(result.workspaceContext.workspace.id).toBe("workspace_123");
+    expect(result.workspaceContext.membership.role).toBe("owner");
   });
 });
