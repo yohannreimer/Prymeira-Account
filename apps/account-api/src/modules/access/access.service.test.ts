@@ -10,43 +10,86 @@ const product: AccessProduct = {
   marketingUrl: "https://primeiradigital.com.br/operis"
 };
 
+const workspace = {
+  id: "workspace-1",
+  status: "active",
+  role: "owner"
+};
+
+const productSeat = {
+  role: "admin",
+  status: "active"
+};
+
 function entitlement(overrides: Partial<AccessEntitlement>): AccessEntitlement {
   return {
+    workspaceId: "workspace-1",
     productKey: "operis",
     status: "active",
     plan: "pro",
     source: "manual",
+    seatsLimit: 3,
     endsAt: null,
     trialEndsAt: null,
     currentPeriodEndsAt: null,
     limits: { ai_requests_month: 1000 },
     ...overrides
-  };
+  } as AccessEntitlement;
+}
+
+function evaluate(overrides: Record<string, unknown> = {}) {
+  return evaluateEntitlementAccess({
+    hasCustomer: true,
+    workspace,
+    productSeat,
+    product,
+    entitlement: entitlement({}),
+    now,
+    ...overrides
+  } as never);
 }
 
 describe("evaluateEntitlementAccess", () => {
   it("denies when the customer is missing", () => {
-    const result = evaluateEntitlementAccess({ hasCustomer: false, product, entitlement: null, now });
+    const result = evaluate({ hasCustomer: false, entitlement: null });
     expect(result).toMatchObject({ allowed: false, reason: "no_customer" });
   });
 
+  it("denies when workspace context is missing", () => {
+    const result = evaluate({ workspace: null });
+    expect(result).toMatchObject({ allowed: false, reason: "no_workspace" });
+  });
+
+  it("denies when workspace is suspended before checking entitlement", () => {
+    const result = evaluate({ workspace: { ...workspace, status: "suspended" } });
+    expect(result).toMatchObject({ allowed: false, reason: "workspace_suspended", status: "suspended" });
+  });
+
+  it("denies when product seat is missing", () => {
+    const result = evaluate({ productSeat: null });
+    expect(result).toMatchObject({ allowed: false, reason: "no_product_seat" });
+  });
+
+  it("denies when product seat is inactive", () => {
+    const result = evaluate({ productSeat: { ...productSeat, status: "revoked" } });
+    expect(result).toMatchObject({ allowed: false, reason: "no_product_seat" });
+  });
+
   it("denies when the product is missing", () => {
-    const result = evaluateEntitlementAccess({ hasCustomer: true, product: null, entitlement: null, now });
+    const result = evaluate({ product: null, entitlement: null });
     expect(result).toMatchObject({ allowed: false, reason: "no_product" });
   });
 
   it("denies when the product is inactive", () => {
-    const result = evaluateEntitlementAccess({
-      hasCustomer: true,
+    const result = evaluate({
       product: { ...product, status: "inactive" },
-      entitlement: null,
-      now
+      entitlement: null
     });
     expect(result).toMatchObject({ allowed: false, reason: "inactive_product" });
   });
 
   it("denies when entitlement is missing and includes upgrade URL when marketing URL exists", () => {
-    const result = evaluateEntitlementAccess({ hasCustomer: true, product, entitlement: null, now });
+    const result = evaluate({ entitlement: null });
 
     expect(result).toEqual({
       allowed: false,
@@ -58,11 +101,9 @@ describe("evaluateEntitlementAccess", () => {
   });
 
   it("denies when entitlement is missing and omits upgrade URL when marketing URL is null", () => {
-    const result = evaluateEntitlementAccess({
-      hasCustomer: true,
+    const result = evaluate({
       product: { ...product, marketingUrl: null },
-      entitlement: null,
-      now
+      entitlement: null
     });
 
     expect(result).toEqual({
@@ -74,11 +115,8 @@ describe("evaluateEntitlementAccess", () => {
   });
 
   it("denies mismatched entitlement product key against requested product", () => {
-    const result = evaluateEntitlementAccess({
-      hasCustomer: true,
-      product,
-      entitlement: entitlement({ productKey: "foreign-product" }),
-      now
+    const result = evaluate({
+      entitlement: entitlement({ productKey: "foreign-product" })
     });
 
     expect(result).toEqual({
@@ -91,111 +129,89 @@ describe("evaluateEntitlementAccess", () => {
   });
 
   it("allows active entitlement", () => {
-    const result = evaluateEntitlementAccess({ hasCustomer: true, product, entitlement: entitlement({}), now });
-    expect(result).toMatchObject({ allowed: true, reason: "active_entitlement", plan: "pro" });
+    const result = evaluate();
+    expect(result).toMatchObject({
+      allowed: true,
+      workspace_id: "workspace-1",
+      workspace_role: "owner",
+      product_role: "admin",
+      seats_limit: 3,
+      reason: "active_entitlement",
+      plan: "pro"
+    });
   });
 
   it("allows internal entitlement", () => {
-    const result = evaluateEntitlementAccess({
-      hasCustomer: true,
-      product,
-      entitlement: entitlement({ status: "internal", plan: "internal", source: "internal" }),
-      now
+    const result = evaluate({
+      entitlement: entitlement({ status: "internal", plan: "internal", source: "internal" })
     });
     expect(result).toMatchObject({ allowed: true, reason: "internal_access" });
   });
 
   it("allows valid trial", () => {
-    const result = evaluateEntitlementAccess({
-      hasCustomer: true,
-      product,
-      entitlement: entitlement({ status: "trial", trialEndsAt: new Date("2026-05-20T00:00:00.000Z") }),
-      now
+    const result = evaluate({
+      entitlement: entitlement({ status: "trial", trialEndsAt: new Date("2026-05-20T00:00:00.000Z") })
     });
     expect(result).toMatchObject({ allowed: true, reason: "active_entitlement", status: "trial" });
   });
 
   it("denies expired trial", () => {
-    const result = evaluateEntitlementAccess({
-      hasCustomer: true,
-      product,
-      entitlement: entitlement({ status: "trial", trialEndsAt: new Date("2026-05-01T00:00:00.000Z") }),
-      now
+    const result = evaluate({
+      entitlement: entitlement({ status: "trial", trialEndsAt: new Date("2026-05-01T00:00:00.000Z") })
     });
     expect(result).toMatchObject({ allowed: false, reason: "trial_expired" });
   });
 
   it("denies trial with missing trial end", () => {
-    const result = evaluateEntitlementAccess({
-      hasCustomer: true,
-      product,
-      entitlement: entitlement({ status: "trial", trialEndsAt: null }),
-      now
+    const result = evaluate({
+      entitlement: entitlement({ status: "trial", trialEndsAt: null })
     });
 
     expect(result).toMatchObject({ allowed: false, reason: "trial_expired" });
   });
 
   it("denies explicit expired entitlement", () => {
-    const result = evaluateEntitlementAccess({
-      hasCustomer: true,
-      product,
-      entitlement: entitlement({ status: "expired" }),
-      now
+    const result = evaluate({
+      entitlement: entitlement({ status: "expired" })
     });
 
     expect(result).toMatchObject({ allowed: false, reason: "expired" });
   });
 
   it("denies active entitlement that ends exactly now", () => {
-    const result = evaluateEntitlementAccess({
-      hasCustomer: true,
-      product,
-      entitlement: entitlement({ status: "active", endsAt: now }),
-      now
+    const result = evaluate({
+      entitlement: entitlement({ status: "active", endsAt: now })
     });
 
     expect(result).toMatchObject({ allowed: false, reason: "expired" });
   });
 
   it("denies internal entitlement with past end date", () => {
-    const result = evaluateEntitlementAccess({
-      hasCustomer: true,
-      product,
-      entitlement: entitlement({ status: "internal", endsAt: new Date("2026-05-15T12:00:00.000Z") }),
-      now
+    const result = evaluate({
+      entitlement: entitlement({ status: "internal", endsAt: new Date("2026-05-15T12:00:00.000Z") })
     });
 
     expect(result).toMatchObject({ allowed: false, reason: "expired" });
   });
 
   it("denies unknown entitlement status closed as expired", () => {
-    const result = evaluateEntitlementAccess({
-      hasCustomer: true,
-      product,
-      entitlement: entitlement({ status: "mystery" }),
-      now
+    const result = evaluate({
+      entitlement: entitlement({ status: "mystery" })
     });
 
     expect(result).toMatchObject({ allowed: false, reason: "expired" });
   });
 
   it("denies blocked entitlement", () => {
-    const result = evaluateEntitlementAccess({
-      hasCustomer: true,
-      product,
-      entitlement: entitlement({ status: "blocked" }),
-      now
+    const result = evaluate({
+      entitlement: entitlement({ status: "blocked" })
     });
     expect(result).toMatchObject({ allowed: false, reason: "blocked" });
   });
 
   it("denies cancelled entitlement immediately", () => {
-    const result = evaluateEntitlementAccess({
-      hasCustomer: true,
-      product,
-      entitlement: entitlement({ status: "cancelled" }),
-      now
+    const result = evaluate({
+      entitlement: entitlement({ status: "cancelled" })
     });
     expect(result).toMatchObject({ allowed: false, reason: "cancelled" });
   });

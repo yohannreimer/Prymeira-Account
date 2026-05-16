@@ -1,7 +1,17 @@
-import type { AccessDecision, AccessEntitlement, AccessProduct } from "./access.types.js";
+import type {
+  AccessDecision,
+  AccessEntitlement,
+  AccessProduct,
+  AccessProductSeat,
+  AccessReason,
+  AccessWorkspace
+} from "./access.types.js";
 
 type EvaluateAccessInput = {
   hasCustomer: boolean;
+  workspace: AccessWorkspace | null;
+  workspaceMissingReason?: Extract<AccessReason, "no_workspace" | "no_workspace_membership">;
+  productSeat: AccessProductSeat | null;
   product: AccessProduct | null;
   entitlement: AccessEntitlement | null;
   now: Date;
@@ -20,6 +30,23 @@ export function evaluateEntitlementAccess(input: EvaluateAccessInput): AccessDec
 
   if (input.product.status !== "active") {
     return deny(input.product.productKey, input.product.status, "inactive_product", input.product.marketingUrl);
+  }
+
+  if (!input.workspace) {
+    return deny(
+      input.product.productKey,
+      "locked",
+      input.workspaceMissingReason ?? "no_workspace",
+      input.product.marketingUrl
+    );
+  }
+
+  if (input.workspace.status !== "active") {
+    return deny(input.product.productKey, input.workspace.status, "workspace_suspended", input.product.marketingUrl);
+  }
+
+  if (!input.productSeat || input.productSeat.status !== "active") {
+    return deny(input.product.productKey, "locked", "no_product_seat", input.product.marketingUrl);
   }
 
   if (!input.entitlement) {
@@ -53,27 +80,35 @@ export function evaluateEntitlementAccess(input: EvaluateAccessInput): AccessDec
       return denyWithEntitlement(entitlement, "trial_expired", input.product.marketingUrl);
     }
 
-    return allow(entitlement, "active_entitlement");
+    return allow(input, entitlement, "active_entitlement");
   }
 
   if (entitlement.status === "internal") {
-    return allow(entitlement, "internal_access");
+    return allow(input, entitlement, "internal_access");
   }
 
   if (entitlement.status === "active") {
-    return allow(entitlement, "active_entitlement");
+    return allow(input, entitlement, "active_entitlement");
   }
 
   return denyWithEntitlement(entitlement, "expired", input.product.marketingUrl);
 }
 
-function allow(entitlement: AccessEntitlement, reason: AccessDecision["reason"]): AccessDecision {
+function allow(
+  input: EvaluateAccessInput,
+  entitlement: AccessEntitlement,
+  reason: AccessDecision["reason"]
+): AccessDecision {
   return {
     allowed: true,
+    workspace_id: input.workspace!.id,
+    workspace_role: input.workspace!.role,
     product_key: entitlement.productKey,
+    product_role: input.productSeat!.role,
     status: entitlement.status,
     plan: entitlement.plan,
     source: entitlement.source,
+    seats_limit: entitlement.seatsLimit,
     limits: entitlement.limits,
     reason
   };
@@ -105,6 +140,7 @@ function denyWithEntitlement(
     status: entitlement.status,
     plan: entitlement.plan,
     source: entitlement.source,
+    seats_limit: entitlement.seatsLimit,
     limits: entitlement.limits,
     reason,
     ...(upgradeUrl ? { upgrade_url: upgradeUrl } : {})
