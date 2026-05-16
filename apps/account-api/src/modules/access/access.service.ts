@@ -28,6 +28,10 @@ export function evaluateEntitlementAccess(input: EvaluateAccessInput): AccessDec
 
   const entitlement = input.entitlement;
 
+  if (entitlement.productKey !== input.product.productKey) {
+    return deny(input.product.productKey, "locked", "no_entitlement", input.product.marketingUrl);
+  }
+
   if (entitlement.status === "blocked") {
     return denyWithEntitlement(entitlement, "blocked", input.product.marketingUrl);
   }
