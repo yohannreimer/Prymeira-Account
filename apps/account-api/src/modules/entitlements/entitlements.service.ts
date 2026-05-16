@@ -7,11 +7,12 @@ type AuditActor = {
 };
 
 type UpsertEntitlementInput = {
-  customerId: string;
+  workspaceId: string;
   productKey: string;
   status: string;
   plan: string;
   source: string;
+  seatsLimit: number;
   endsAt?: Date | null;
   trialEndsAt?: Date | null;
   currentPeriodEndsAt?: Date | null;
@@ -35,10 +36,10 @@ async function upsertEntitlementInTransaction(
   actor: AuditActor,
   input: UpsertEntitlementInput
 ) {
-  const { workspaceId } = await resolveEntitlementTargets(prisma, input);
+  const { workspace } = await resolveEntitlementTargets(prisma, input);
 
   const where = {
-    workspaceId_productKey: { workspaceId, productKey: input.productKey }
+    workspaceId_productKey: { workspaceId: input.workspaceId, productKey: input.productKey }
   };
   const before = await prisma.entitlement.findUnique({ where });
   const nullableDates = {
@@ -55,20 +56,39 @@ async function upsertEntitlementInTransaction(
       status: input.status,
       plan: input.plan,
       source: input.source,
+      seatsLimit: input.seatsLimit,
       ...nullableDates,
       limits: input.limits,
       metadata: input.metadata
     },
     create: {
-      workspaceId,
-      customerId: input.customerId,
+      workspaceId: input.workspaceId,
       productKey: input.productKey,
       status: input.status,
       plan: input.plan,
       source: input.source,
+      seatsLimit: input.seatsLimit,
       ...nullableDates,
       limits: input.limits,
       metadata: input.metadata
+    }
+  });
+
+  await prisma.workspaceProductMember.upsert({
+    where: {
+      workspaceId_customerId_productKey: {
+        workspaceId: input.workspaceId,
+        customerId: workspace.ownerCustomerId,
+        productKey: input.productKey
+      }
+    },
+    update: { role: "owner", status: "active" },
+    create: {
+      workspaceId: input.workspaceId,
+      customerId: workspace.ownerCustomerId,
+      productKey: input.productKey,
+      role: "owner",
+      status: "active"
     }
   });
 
@@ -88,15 +108,15 @@ async function upsertEntitlementInTransaction(
 
 async function resolveEntitlementTargets(
   prisma: EntitlementPrisma,
-  input: Pick<UpsertEntitlementInput, "customerId" | "productKey">
+  input: Pick<UpsertEntitlementInput, "workspaceId" | "productKey">
 ) {
-  const customer = await prisma.customer.findUnique({
-    where: { id: input.customerId },
-    select: { id: true }
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: input.workspaceId },
+    select: { ownerCustomerId: true }
   });
 
-  if (!customer) {
-    throw new ApiError(404, "NOT_FOUND", "Customer not found.");
+  if (!workspace) {
+    throw new ApiError(404, "NOT_FOUND", "Workspace not found.");
   }
 
   const product = await prisma.product.findUnique({
@@ -108,34 +128,21 @@ async function resolveEntitlementTargets(
     throw new ApiError(404, "NOT_FOUND", "Product not found.");
   }
 
-  const workspaceMembership = await prisma.workspaceMember.findFirst({
-    where: {
-      customerId: input.customerId,
-      status: "active",
-      workspace: { status: "active" }
-    },
-    orderBy: { createdAt: "asc" },
-    select: { workspaceId: true }
-  });
-
-  if (!workspaceMembership) {
-    throw new ApiError(404, "NOT_FOUND", "Workspace not found.");
-  }
-
-  return { workspaceId: workspaceMembership.workspaceId };
+  return { workspace };
 }
 
 export async function blockEntitlement(
   prisma: PrismaClient,
   actor: AuditActor,
-  input: { customerId: string; productKey: string; reason: string }
+  input: { workspaceId: string; productKey: string; reason: string }
 ) {
   return upsertEntitlement(prisma, actor, {
-    customerId: input.customerId,
+    workspaceId: input.workspaceId,
     productKey: input.productKey,
     status: "blocked",
     plan: "blocked",
     source: "admin",
+    seatsLimit: 1,
     limits: {},
     metadata: { reason: input.reason },
     endsAt: null,
@@ -148,16 +155,17 @@ export async function blockEntitlement(
 export async function grantTrialEntitlement(
   prisma: PrismaClient,
   actor: AuditActor,
-  input: { customerId: string; productKey: string; plan: string; trialDays: number; now?: Date }
+  input: { workspaceId: string; productKey: string; plan: string; trialDays: number; now?: Date }
 ) {
   const now = input.now ?? new Date();
 
   return upsertEntitlement(prisma, actor, {
-    customerId: input.customerId,
+    workspaceId: input.workspaceId,
     productKey: input.productKey,
     status: "trial",
     plan: input.plan,
     source: "trial",
+    seatsLimit: 1,
     trialEndsAt: addDays(now, input.trialDays),
     endsAt: null,
     currentPeriodEndsAt: null,

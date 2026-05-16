@@ -61,7 +61,11 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
           },
           include: {
             workspace: {
-              include: { entitlements: true }
+              include: {
+                entitlements: true,
+                members: { include: { customer: true } },
+                productMembers: true
+              }
             }
           }
         }
@@ -74,9 +78,18 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
           .map((entitlement) => [entitlement.id, entitlement]) ?? []
       ).values()
     );
+    const workspaces = Array.from(
+      new Map(
+        customer?.workspaceMembers.map((membership) => [
+          membership.workspace.id,
+          membership.workspace
+        ]) ?? []
+      ).values()
+    );
     const responseCustomer = customer
       ? (({ workspaceMembers: _workspaceMembers, ...customerFields }) => ({
           ...customerFields,
+          workspaces,
           entitlements: workspaceEntitlements
         }))(customer)
       : null;
@@ -98,22 +111,24 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       value == null ? null : new Date(value);
 
     const entitlementInput: {
-      customerId: string;
+      workspaceId: string;
       productKey: string;
       status: string;
       plan: string;
       source: string;
+      seatsLimit: number;
       endsAt?: Date | null;
       trialEndsAt?: Date | null;
       currentPeriodEndsAt?: Date | null;
       limits: Prisma.InputJsonValue;
       metadata: Prisma.InputJsonValue;
     } = {
-      customerId: input.customer_id,
+      workspaceId: input.workspace_id,
       productKey: input.product_key,
       status: input.status,
       plan: input.plan,
       source: input.source,
+      seatsLimit: input.seats_limit,
       limits: input.limits as Prisma.InputJsonValue,
       metadata: input.metadata as Prisma.InputJsonValue
     };
@@ -137,7 +152,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     const user = await requireAdmin(request.headers.authorization);
     const input = blockEntitlementSchema.parse(request.body);
     const entitlement = await blockEntitlement(app.prisma, user, {
-      customerId: input.customer_id,
+      workspaceId: input.workspace_id,
       productKey: input.product_key,
       reason: input.reason
     });
@@ -149,7 +164,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     const user = await requireAdmin(request.headers.authorization);
     const input = trialEntitlementSchema.parse(request.body);
     const entitlement = await grantTrialEntitlement(app.prisma, user, {
-      customerId: input.customer_id,
+      workspaceId: input.workspace_id,
       productKey: input.product_key,
       plan: input.plan,
       trialDays: input.trial_days

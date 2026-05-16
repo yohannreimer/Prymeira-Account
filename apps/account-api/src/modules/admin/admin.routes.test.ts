@@ -20,6 +20,77 @@ beforeEach(() => {
 });
 
 describe("adminRoutes", () => {
+  const workspaceId = "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4";
+  const customerId = "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0";
+
+  function createEntitlementRoutePrisma() {
+    const calls: {
+      entitlementUpsert?: {
+        where?: unknown;
+        update?: Record<string, unknown>;
+        create?: Record<string, unknown>;
+      };
+      workspaceProductMemberUpsert?: unknown;
+    } = {};
+    const prisma = {
+      $transaction<T>(callback: (tx: PrismaClient) => Promise<T>) {
+        return callback(prisma as unknown as PrismaClient);
+      },
+      workspace: {
+        findUnique() {
+          return { ownerCustomerId: customerId };
+        }
+      },
+      product: {
+        findUnique() {
+          return { productKey: "operis" };
+        }
+      },
+      entitlement: {
+        findUnique() {
+          return null;
+        },
+        upsert(args: {
+          where?: unknown;
+          update?: Record<string, unknown>;
+          create?: Record<string, unknown>;
+        }) {
+          calls.entitlementUpsert = args;
+          return {
+            id: "entitlement_123",
+            workspaceId,
+            productKey: "operis",
+            status: args.update?.status,
+            plan: args.update?.plan,
+            source: args.update?.source,
+            seatsLimit: args.update?.seatsLimit,
+            trialEndsAt: args.update?.trialEndsAt ?? null
+          };
+        }
+      },
+      workspaceProductMember: {
+        upsert(args: unknown) {
+          calls.workspaceProductMemberUpsert = args;
+          return {
+            id: "seat_123",
+            workspaceId,
+            customerId,
+            productKey: "operis",
+            role: "owner",
+            status: "active"
+          };
+        }
+      },
+      auditLog: {
+        create() {
+          return { id: "audit_123" };
+        }
+      }
+    } as unknown as PrismaClient;
+
+    return { prisma, calls };
+  }
+
   it("returns 403 when a non-admin user lists customers", async () => {
     const nonAdminAuthVerifier: AuthVerifier = {
       async verifyBearerToken() {
@@ -57,14 +128,29 @@ describe("adminRoutes", () => {
   it("returns customer audit logs for the customer and their entitlements", async () => {
     const calls: { auditFindMany?: unknown } = {};
     const customer = {
-      id: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0",
+      id: customerId,
       subscriptions: [],
       workspaceMembers: [
         {
           workspace: {
+            id: workspaceId,
             entitlements: [
               { id: "entitlement_1", customerId: null, productKey: "financeiro" },
               { id: "entitlement_2", customerId: null, productKey: "orquestrador" }
+            ],
+            members: [
+              {
+                role: "owner",
+                customer: { id: customerId, email: "owner@example.com" }
+              }
+            ],
+            productMembers: [
+              {
+                workspaceId,
+                customerId,
+                productKey: "financeiro",
+                status: "active"
+              }
             ]
           }
         }
@@ -104,7 +190,11 @@ describe("adminRoutes", () => {
           },
           include: {
             workspace: {
-              include: { entitlements: true }
+              include: {
+                entitlements: true,
+                members: { include: { customer: true } },
+                productMembers: true
+              }
             }
           }
         }
@@ -112,6 +202,29 @@ describe("adminRoutes", () => {
     });
     expect(response.json()).toMatchObject({
       customer: {
+        workspaces: [
+          {
+            id: workspaceId,
+            entitlements: [
+              { id: "entitlement_1", customerId: null, productKey: "financeiro" },
+              { id: "entitlement_2", customerId: null, productKey: "orquestrador" }
+            ],
+            members: [
+              {
+                role: "owner",
+                customer: { id: customerId, email: "owner@example.com" }
+              }
+            ],
+            productMembers: [
+              {
+                workspaceId,
+                customerId,
+                productKey: "financeiro",
+                status: "active"
+              }
+            ]
+          }
+        ],
         entitlements: [
           { id: "entitlement_1", customerId: null, productKey: "financeiro" },
           { id: "entitlement_2", customerId: null, productKey: "orquestrador" }
@@ -128,32 +241,31 @@ describe("adminRoutes", () => {
   });
 
   it("preserves omitted nullable date fields when upserting entitlements", async () => {
-    const calls: { upsert?: { update?: unknown; create?: unknown } } = {};
+    const calls: {
+      upsert?: { update?: unknown; create?: unknown };
+      workspaceProductMemberUpsert?: unknown;
+    } = {};
     const entitlement = {
       id: "entitlement_123",
-      customerId: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0",
+      workspaceId,
       productKey: "operis",
       status: "active",
       plan: "pro",
-      source: "admin"
+      source: "admin",
+      seatsLimit: 5
     };
     const prisma = {
       $transaction<T>(callback: (tx: PrismaClient) => Promise<T>) {
         return callback(prisma as unknown as PrismaClient);
       },
-      customer: {
+      workspace: {
         findUnique() {
-          return { id: entitlement.customerId };
+          return { ownerCustomerId: customerId };
         }
       },
       product: {
         findUnique() {
           return { productKey: entitlement.productKey };
-        }
-      },
-      workspaceMember: {
-        findFirst() {
-          return { workspaceId: "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4" };
         }
       },
       entitlement: {
@@ -170,6 +282,12 @@ describe("adminRoutes", () => {
           return entitlement;
         }
       },
+      workspaceProductMember: {
+        upsert(args: unknown) {
+          calls.workspaceProductMemberUpsert = args;
+          return { id: "seat_123" };
+        }
+      },
       auditLog: {
         create() {
           return { id: "audit_123" };
@@ -183,11 +301,12 @@ describe("adminRoutes", () => {
       url: "/admin/entitlements",
       headers: { authorization: "Bearer token" },
       payload: {
-        customer_id: entitlement.customerId,
+        workspace_id: workspaceId,
         product_key: entitlement.productKey,
         status: "active",
         plan: "pro",
-        source: "admin"
+        source: "admin",
+        seats_limit: 5
       }
     });
 
@@ -199,7 +318,177 @@ describe("adminRoutes", () => {
     expect(calls.upsert?.create).not.toHaveProperty("trialEndsAt");
     expect(calls.upsert?.create).not.toHaveProperty("currentPeriodEndsAt");
     expect(calls.upsert?.create).toMatchObject({
-      workspaceId: "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4"
+      workspaceId,
+      seatsLimit: 5
+    });
+    expect(calls.workspaceProductMemberUpsert).toMatchObject({
+      where: {
+        workspaceId_customerId_productKey: {
+          workspaceId,
+          customerId,
+          productKey: "operis"
+        }
+      },
+      update: { role: "owner", status: "active" }
+    });
+
+    await app.close();
+  });
+
+  it("grants entitlement to a workspace and creates owner product seat", async () => {
+    const { prisma, calls } = createEntitlementRoutePrisma();
+    const app = await buildApp({ authVerifier, prisma });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/admin/entitlements",
+      headers: { authorization: "Bearer token" },
+      payload: {
+        workspace_id: workspaceId,
+        product_key: "operis",
+        status: "active",
+        plan: "pro",
+        source: "admin",
+        seats_limit: 7
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      entitlement: {
+        workspaceId,
+        productKey: "operis",
+        status: "active",
+        seatsLimit: 7
+      }
+    });
+    expect(calls.entitlementUpsert).toMatchObject({
+      where: {
+        workspaceId_productKey: {
+          workspaceId,
+          productKey: "operis"
+        }
+      },
+      update: {
+        status: "active",
+        seatsLimit: 7
+      },
+      create: {
+        workspaceId,
+        productKey: "operis",
+        seatsLimit: 7
+      }
+    });
+    expect(calls.workspaceProductMemberUpsert).toMatchObject({
+      where: {
+        workspaceId_customerId_productKey: {
+          workspaceId,
+          customerId,
+          productKey: "operis"
+        }
+      },
+      update: { role: "owner", status: "active" },
+      create: {
+        workspaceId,
+        customerId,
+        productKey: "operis",
+        role: "owner",
+        status: "active"
+      }
+    });
+
+    await app.close();
+  });
+
+  it("blocks a workspace entitlement", async () => {
+    const { prisma, calls } = createEntitlementRoutePrisma();
+    const app = await buildApp({ authVerifier, prisma });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/admin/entitlements/block",
+      headers: { authorization: "Bearer token" },
+      payload: {
+        workspace_id: workspaceId,
+        product_key: "operis",
+        reason: "chargeback"
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      entitlement: {
+        workspaceId,
+        productKey: "operis",
+        status: "blocked",
+        seatsLimit: 1
+      }
+    });
+    expect(calls.entitlementUpsert).toMatchObject({
+      update: {
+        status: "blocked",
+        seatsLimit: 1,
+        metadata: { reason: "chargeback" }
+      }
+    });
+    expect(calls.workspaceProductMemberUpsert).toMatchObject({
+      update: { role: "owner", status: "active" },
+      create: {
+        workspaceId,
+        customerId,
+        productKey: "operis",
+        role: "owner",
+        status: "active"
+      }
+    });
+
+    await app.close();
+  });
+
+  it("grants a trial to a workspace", async () => {
+    const { prisma, calls } = createEntitlementRoutePrisma();
+    const app = await buildApp({ authVerifier, prisma });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/admin/entitlements/trial",
+      headers: { authorization: "Bearer token" },
+      payload: {
+        workspace_id: workspaceId,
+        product_key: "operis",
+        plan: "trial",
+        trial_days: 14
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      entitlement: {
+        workspaceId,
+        productKey: "operis",
+        status: "trial",
+        seatsLimit: 1
+      }
+    });
+    expect(calls.entitlementUpsert).toMatchObject({
+      update: {
+        status: "trial",
+        plan: "trial",
+        source: "trial",
+        seatsLimit: 1,
+        metadata: { trial_days: 14 }
+      }
+    });
+    expect(calls.entitlementUpsert?.update?.trialEndsAt).toBeInstanceOf(Date);
+    expect(calls.workspaceProductMemberUpsert).toMatchObject({
+      update: { role: "owner", status: "active" },
+      create: {
+        workspaceId,
+        customerId,
+        productKey: "operis",
+        role: "owner",
+        status: "active"
+      }
     });
 
     await app.close();

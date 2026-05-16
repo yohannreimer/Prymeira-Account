@@ -11,51 +11,58 @@ const actor = {
   clerkUserId: "user_admin"
 };
 
+const workspaceId = "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4";
+const ownerCustomerId = "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0";
+
 function prismaWithEntitlementMutation() {
   const calls: {
-    findUnique?: unknown;
-    upsert?: unknown;
+    entitlementFindUnique?: unknown;
+    entitlementUpsert?: unknown;
     auditCreate?: unknown;
-    workspaceMemberFindFirst?: unknown;
+    workspaceFindUnique?: unknown;
+    productFindUnique?: unknown;
+    workspaceProductMemberUpsert?: unknown;
   } = {};
-  const workspaceId = "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4";
 
   const prisma = {
     $transaction<T>(callback: (tx: PrismaClient) => Promise<T>) {
       return callback(prisma as unknown as PrismaClient);
     },
-    customer: {
-      findUnique() {
-        return { id: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0" };
+    workspace: {
+      findUnique(args: unknown) {
+        calls.workspaceFindUnique = args;
+        return { id: workspaceId, ownerCustomerId };
       }
     },
     product: {
-      findUnique() {
+      findUnique(args: unknown) {
+        calls.productFindUnique = args;
         return { productKey: "operis" };
-      }
-    },
-    workspaceMember: {
-      findFirst(args: unknown) {
-        calls.workspaceMemberFindFirst = args;
-        return { workspaceId };
       }
     },
     entitlement: {
       findUnique(args: unknown) {
-        calls.findUnique = args;
+        calls.entitlementFindUnique = args;
         return null;
       },
       upsert(args: unknown) {
-        calls.upsert = args;
+        calls.entitlementUpsert = args;
         return {
           id: "entitlement_123",
-          customerId: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0",
+          workspaceId,
           productKey: "operis",
           status: "trial",
           plan: "trial",
           source: "trial",
+          seatsLimit: 1,
           trialEndsAt: new Date("2026-05-30T12:00:00.000Z")
         };
+      }
+    },
+    workspaceProductMember: {
+      upsert(args: unknown) {
+        calls.workspaceProductMemberUpsert = args;
+        return { id: "seat_123" };
       }
     },
     auditLog: {
@@ -70,23 +77,30 @@ function prismaWithEntitlementMutation() {
 }
 
 describe("grantTrialEntitlement", () => {
-  it("grants a trial entitlement with computed trial end and audit log", async () => {
+  it("grants a trial entitlement to a workspace with computed trial end, owner seat, and audit log", async () => {
     const { prisma, calls } = prismaWithEntitlementMutation();
-    const customerId = "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0";
     const now = new Date("2026-05-16T12:00:00.000Z");
 
     const entitlement = await grantTrialEntitlement(prisma, actor, {
-      customerId,
+      workspaceId,
       productKey: "operis",
       plan: "trial",
       trialDays: 14,
       now
     });
 
-    expect(calls.upsert).toMatchObject({
+    expect(calls.workspaceFindUnique).toMatchObject({
+      where: { id: workspaceId },
+      select: { ownerCustomerId: true }
+    });
+    expect(calls.productFindUnique).toMatchObject({
+      where: { productKey: "operis" },
+      select: { productKey: true }
+    });
+    expect(calls.entitlementUpsert).toMatchObject({
       where: {
         workspaceId_productKey: {
-          workspaceId: "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4",
+          workspaceId,
           productKey: "operis"
         }
       },
@@ -94,6 +108,7 @@ describe("grantTrialEntitlement", () => {
         status: "trial",
         plan: "trial",
         source: "trial",
+        seatsLimit: 1,
         trialEndsAt: new Date("2026-05-30T12:00:00.000Z"),
         endsAt: null,
         currentPeriodEndsAt: null,
@@ -101,19 +116,27 @@ describe("grantTrialEntitlement", () => {
         metadata: { trial_days: 14 }
       },
       create: {
-        workspaceId: "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4",
-        customerId,
-        productKey: "operis"
+        workspaceId,
+        productKey: "operis",
+        seatsLimit: 1
       }
     });
-    expect(calls.workspaceMemberFindFirst).toMatchObject({
+    expect(calls.workspaceProductMemberUpsert).toMatchObject({
       where: {
-        customerId,
-        status: "active",
-        workspace: { status: "active" }
+        workspaceId_customerId_productKey: {
+          workspaceId,
+          customerId: ownerCustomerId,
+          productKey: "operis"
+        }
       },
-      orderBy: { createdAt: "asc" },
-      select: { workspaceId: true }
+      update: { role: "owner", status: "active" },
+      create: {
+        workspaceId,
+        customerId: ownerCustomerId,
+        productKey: "operis",
+        role: "owner",
+        status: "active"
+      }
     });
     expect(calls.auditCreate).toMatchObject({
       data: {
@@ -123,30 +146,24 @@ describe("grantTrialEntitlement", () => {
         targetId: "entitlement_123"
       }
     });
-    expect(entitlement).toMatchObject({ id: "entitlement_123", status: "trial" });
+    expect(entitlement).toMatchObject({ id: "entitlement_123", workspaceId, status: "trial" });
   });
 });
 
 describe("upsertEntitlement", () => {
-  it("runs validation, mutation, and audit creation in one transaction", async () => {
+  it("runs workspace validation, mutation, owner seat, and audit creation in one transaction", async () => {
     const operations: string[] = [];
     const tx = {
-      customer: {
+      workspace: {
         findUnique() {
-          operations.push("customer.findUnique");
-          return { id: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0" };
+          operations.push("workspace.findUnique");
+          return { ownerCustomerId };
         }
       },
       product: {
         findUnique() {
           operations.push("product.findUnique");
           return { productKey: "operis" };
-        }
-      },
-      workspaceMember: {
-        findFirst() {
-          operations.push("workspaceMember.findFirst");
-          return { workspaceId: "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4" };
         }
       },
       entitlement: {
@@ -158,12 +175,19 @@ describe("upsertEntitlement", () => {
           operations.push("entitlement.upsert");
           return {
             id: "entitlement_123",
-            customerId: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0",
+            workspaceId,
             productKey: "operis",
             status: "active",
             plan: "pro",
-            source: "admin"
+            source: "admin",
+            seatsLimit: 5
           };
+        }
+      },
+      workspaceProductMember: {
+        upsert() {
+          operations.push("workspaceProductMember.upsert");
+          return { id: "seat_123" };
         }
       },
       auditLog: {
@@ -182,11 +206,12 @@ describe("upsertEntitlement", () => {
 
     await expect(
       upsertEntitlement(prisma, actor, {
-        customerId: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0",
+        workspaceId,
         productKey: "operis",
         status: "active",
         plan: "pro",
         source: "admin",
+        seatsLimit: 5,
         limits: {},
         metadata: {}
       })
@@ -194,21 +219,21 @@ describe("upsertEntitlement", () => {
 
     expect(operations).toEqual([
       "transaction.begin",
-      "customer.findUnique",
+      "workspace.findUnique",
       "product.findUnique",
-      "workspaceMember.findFirst",
       "entitlement.findUnique",
       "entitlement.upsert",
+      "workspaceProductMember.upsert",
       "auditLog.create"
     ]);
   });
 
-  it("rejects missing customers before mutating entitlements", async () => {
+  it("rejects missing workspaces before mutating entitlements", async () => {
     const operations: string[] = [];
     const tx = {
-      customer: {
+      workspace: {
         findUnique() {
-          operations.push("customer.findUnique");
+          operations.push("workspace.findUnique");
           return null;
         }
       },
@@ -233,38 +258,33 @@ describe("upsertEntitlement", () => {
 
     await expect(
       upsertEntitlement(prisma, actor, {
-        customerId: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0",
+        workspaceId,
         productKey: "operis",
         status: "active",
         plan: "pro",
         source: "admin",
+        seatsLimit: 1,
         limits: {},
         metadata: {}
       })
-    ).rejects.toEqual(new ApiError(404, "NOT_FOUND", "Customer not found."));
+    ).rejects.toEqual(new ApiError(404, "NOT_FOUND", "Workspace not found."));
 
-    expect(operations).toEqual(["customer.findUnique"]);
+    expect(operations).toEqual(["workspace.findUnique"]);
   });
 
   it("rejects missing products before mutating entitlements", async () => {
     const operations: string[] = [];
     const tx = {
-      customer: {
+      workspace: {
         findUnique() {
-          operations.push("customer.findUnique");
-          return { id: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0" };
+          operations.push("workspace.findUnique");
+          return { ownerCustomerId };
         }
       },
       product: {
         findUnique() {
           operations.push("product.findUnique");
           return null;
-        }
-      },
-      workspaceMember: {
-        findFirst() {
-          operations.push("workspaceMember.findFirst");
-          return { workspaceId: "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4" };
         }
       },
       entitlement: {
@@ -282,30 +302,48 @@ describe("upsertEntitlement", () => {
 
     await expect(
       upsertEntitlement(prisma, actor, {
-        customerId: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0",
+        workspaceId,
         productKey: "operis",
         status: "active",
         plan: "pro",
         source: "admin",
+        seatsLimit: 1,
         limits: {},
         metadata: {}
       })
     ).rejects.toEqual(new ApiError(404, "NOT_FOUND", "Product not found."));
 
-    expect(operations).toEqual(["customer.findUnique", "product.findUnique"]);
+    expect(operations).toEqual(["workspace.findUnique", "product.findUnique"]);
   });
 });
 
 describe("blockEntitlement", () => {
-  it("uses a block-specific audit action", async () => {
+  it("uses a block-specific audit action and keeps the workspace owner seated", async () => {
     const { prisma, calls } = prismaWithEntitlementMutation();
 
     await blockEntitlement(prisma, actor, {
-      customerId: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0",
+      workspaceId,
       productKey: "operis",
       reason: "chargeback"
     });
 
+    expect(calls.entitlementUpsert).toMatchObject({
+      update: {
+        status: "blocked",
+        seatsLimit: 1,
+        metadata: { reason: "chargeback" }
+      }
+    });
+    expect(calls.workspaceProductMemberUpsert).toMatchObject({
+      update: { role: "owner", status: "active" },
+      create: {
+        workspaceId,
+        customerId: ownerCustomerId,
+        productKey: "operis",
+        role: "owner",
+        status: "active"
+      }
+    });
     expect(calls.auditCreate).toMatchObject({
       data: {
         action: "entitlement.block"
