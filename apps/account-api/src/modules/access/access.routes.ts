@@ -15,11 +15,22 @@ export const accessRoutes: FastifyPluginAsync = async (app) => {
     const query = accessCheckQuerySchema.parse(request.query);
     const customer = await findCustomerByClerkUserId(app.prisma, user.clerkUserId);
     const product = await findProductByKey(app.prisma, query.product_key);
-    const entitlement = customer
+    const workspaceMembership = customer
+      ? await app.prisma.workspaceMember.findFirst({
+          where: {
+            customerId: customer.id,
+            status: "active",
+            workspace: { status: "active" }
+          },
+          orderBy: { createdAt: "asc" },
+          select: { workspaceId: true }
+        })
+      : null;
+    const entitlement = workspaceMembership
       ? await app.prisma.entitlement.findUnique({
           where: {
-            customerId_productKey: {
-              customerId: customer.id,
+            workspaceId_productKey: {
+              workspaceId: workspaceMembership.workspaceId,
               productKey: query.product_key
             }
           }

@@ -116,6 +116,11 @@ describe("adminRoutes", () => {
           return { productKey: entitlement.productKey };
         }
       },
+      workspaceMember: {
+        findFirst() {
+          return { workspaceId: "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4" };
+        }
+      },
       entitlement: {
         findUnique() {
           return {
@@ -158,6 +163,9 @@ describe("adminRoutes", () => {
     expect(calls.upsert?.create).not.toHaveProperty("endsAt");
     expect(calls.upsert?.create).not.toHaveProperty("trialEndsAt");
     expect(calls.upsert?.create).not.toHaveProperty("currentPeriodEndsAt");
+    expect(calls.upsert?.create).toMatchObject({
+      workspaceId: "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4"
+    });
 
     await app.close();
   });

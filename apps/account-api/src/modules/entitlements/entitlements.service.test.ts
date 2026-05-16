@@ -16,7 +16,9 @@ function prismaWithEntitlementMutation() {
     findUnique?: unknown;
     upsert?: unknown;
     auditCreate?: unknown;
+    workspaceMemberFindFirst?: unknown;
   } = {};
+  const workspaceId = "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4";
 
   const prisma = {
     $transaction<T>(callback: (tx: PrismaClient) => Promise<T>) {
@@ -30,6 +32,12 @@ function prismaWithEntitlementMutation() {
     product: {
       findUnique() {
         return { productKey: "operis" };
+      }
+    },
+    workspaceMember: {
+      findFirst(args: unknown) {
+        calls.workspaceMemberFindFirst = args;
+        return { workspaceId };
       }
     },
     entitlement: {
@@ -76,7 +84,12 @@ describe("grantTrialEntitlement", () => {
     });
 
     expect(calls.upsert).toMatchObject({
-      where: { customerId_productKey: { customerId, productKey: "operis" } },
+      where: {
+        workspaceId_productKey: {
+          workspaceId: "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4",
+          productKey: "operis"
+        }
+      },
       update: {
         status: "trial",
         plan: "trial",
@@ -86,7 +99,21 @@ describe("grantTrialEntitlement", () => {
         currentPeriodEndsAt: null,
         limits: {},
         metadata: { trial_days: 14 }
+      },
+      create: {
+        workspaceId: "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4",
+        customerId,
+        productKey: "operis"
       }
+    });
+    expect(calls.workspaceMemberFindFirst).toMatchObject({
+      where: {
+        customerId,
+        status: "active",
+        workspace: { status: "active" }
+      },
+      orderBy: { createdAt: "asc" },
+      select: { workspaceId: true }
     });
     expect(calls.auditCreate).toMatchObject({
       data: {
@@ -114,6 +141,12 @@ describe("upsertEntitlement", () => {
         findUnique() {
           operations.push("product.findUnique");
           return { productKey: "operis" };
+        }
+      },
+      workspaceMember: {
+        findFirst() {
+          operations.push("workspaceMember.findFirst");
+          return { workspaceId: "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4" };
         }
       },
       entitlement: {
@@ -163,6 +196,7 @@ describe("upsertEntitlement", () => {
       "transaction.begin",
       "customer.findUnique",
       "product.findUnique",
+      "workspaceMember.findFirst",
       "entitlement.findUnique",
       "entitlement.upsert",
       "auditLog.create"
@@ -225,6 +259,12 @@ describe("upsertEntitlement", () => {
         findUnique() {
           operations.push("product.findUnique");
           return null;
+        }
+      },
+      workspaceMember: {
+        findFirst() {
+          operations.push("workspaceMember.findFirst");
+          return { workspaceId: "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4" };
         }
       },
       entitlement: {

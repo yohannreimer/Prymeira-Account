@@ -35,10 +35,10 @@ async function upsertEntitlementInTransaction(
   actor: AuditActor,
   input: UpsertEntitlementInput
 ) {
-  await assertEntitlementTargetsExist(prisma, input);
+  const { workspaceId } = await resolveEntitlementTargets(prisma, input);
 
   const where = {
-    customerId_productKey: { customerId: input.customerId, productKey: input.productKey }
+    workspaceId_productKey: { workspaceId, productKey: input.productKey }
   };
   const before = await prisma.entitlement.findUnique({ where });
   const nullableDates = {
@@ -60,6 +60,7 @@ async function upsertEntitlementInTransaction(
       metadata: input.metadata
     },
     create: {
+      workspaceId,
       customerId: input.customerId,
       productKey: input.productKey,
       status: input.status,
@@ -85,7 +86,7 @@ async function upsertEntitlementInTransaction(
   return entitlement;
 }
 
-async function assertEntitlementTargetsExist(
+async function resolveEntitlementTargets(
   prisma: EntitlementPrisma,
   input: Pick<UpsertEntitlementInput, "customerId" | "productKey">
 ) {
@@ -106,6 +107,22 @@ async function assertEntitlementTargetsExist(
   if (!product) {
     throw new ApiError(404, "NOT_FOUND", "Product not found.");
   }
+
+  const workspaceMembership = await prisma.workspaceMember.findFirst({
+    where: {
+      customerId: input.customerId,
+      status: "active",
+      workspace: { status: "active" }
+    },
+    orderBy: { createdAt: "asc" },
+    select: { workspaceId: true }
+  });
+
+  if (!workspaceMembership) {
+    throw new ApiError(404, "NOT_FOUND", "Workspace not found.");
+  }
+
+  return { workspaceId: workspaceMembership.workspaceId };
 }
 
 export async function blockEntitlement(

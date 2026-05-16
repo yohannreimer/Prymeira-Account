@@ -36,6 +36,11 @@ describe("accessRoutes", () => {
         findUnique() {
           throw new Error("entitlement lookup should not run without a customer");
         }
+      },
+      workspaceMember: {
+        findFirst() {
+          throw new Error("workspace lookup should not run without a customer");
+        }
       }
     } as unknown as PrismaClient;
     const app = await buildApp({ authVerifier, prisma });
@@ -62,6 +67,7 @@ describe("accessRoutes", () => {
       email: "user@example.com",
       name: "User"
     };
+    const calls: { workspaceMemberFindFirst?: unknown; entitlementFindUnique?: unknown } = {};
     const prisma = {
       customer: {
         findUnique() {
@@ -77,8 +83,15 @@ describe("accessRoutes", () => {
           };
         }
       },
+      workspaceMember: {
+        findFirst(args: unknown) {
+          calls.workspaceMemberFindFirst = args;
+          return { workspaceId: "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4" };
+        }
+      },
       entitlement: {
-        findUnique() {
+        findUnique(args: unknown) {
+          calls.entitlementFindUnique = args;
           return {
             productKey: "operis",
             status: "active",
@@ -101,6 +114,23 @@ describe("accessRoutes", () => {
     });
 
     expect(response.statusCode).toBe(200);
+    expect(calls.workspaceMemberFindFirst).toMatchObject({
+      where: {
+        customerId: customer.id,
+        status: "active",
+        workspace: { status: "active" }
+      },
+      orderBy: { createdAt: "asc" },
+      select: { workspaceId: true }
+    });
+    expect(calls.entitlementFindUnique).toMatchObject({
+      where: {
+        workspaceId_productKey: {
+          workspaceId: "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4",
+          productKey: "operis"
+        }
+      }
+    });
     expect(response.json()).toMatchObject({
       allowed: true,
       product_key: "operis",
