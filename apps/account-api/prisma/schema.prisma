@@ -8,41 +8,118 @@ datasource db {
 }
 
 model Customer {
-  id                String         @id @default(uuid()) @db.Uuid
-  clerkUserId       String         @unique @map("clerk_user_id")
+  id                String                   @id @default(uuid()) @db.Uuid
+  clerkUserId       String                   @unique @map("clerk_user_id")
   email             String
   name              String?
-  gatewayCustomerId String?        @map("gateway_customer_id")
-  createdAt         DateTime       @default(now()) @map("created_at")
-  updatedAt         DateTime       @updatedAt @map("updated_at")
+  gatewayCustomerId String?                  @map("gateway_customer_id")
+  createdAt         DateTime                 @default(now()) @map("created_at")
+  updatedAt         DateTime                 @updatedAt @map("updated_at")
   entitlements      Entitlement[]
   subscriptions     Subscription[]
+  ownedWorkspaces   Workspace[]              @relation("WorkspaceOwner")
+  workspaceMembers  WorkspaceMember[]
+  productSeats      WorkspaceProductMember[]
 
   @@map("customers")
 }
 
 model Product {
-  id           String        @id @default(uuid()) @db.Uuid
-  productKey   String        @unique @map("product_key")
-  name         String
-  description  String?
-  appUrl       String        @map("app_url")
-  marketingUrl String?       @map("marketing_url")
-  status       String        @default("active")
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
-  entitlements Entitlement[]
+  id             String                   @id @default(uuid()) @db.Uuid
+  productKey     String                   @unique @map("product_key")
+  name           String
+  description    String?
+  appUrl         String                   @map("app_url")
+  marketingUrl   String?                  @map("marketing_url")
+  status         String                   @default("active")
+  createdAt      DateTime                 @default(now()) @map("created_at")
+  updatedAt      DateTime                 @updatedAt @map("updated_at")
+  entitlements   Entitlement[]
+  productMembers WorkspaceProductMember[]
 
   @@map("products")
 }
 
+model Workspace {
+  id              String                   @id @default(uuid()) @db.Uuid
+  name            String
+  slug            String                   @unique
+  type            String                   @default("individual")
+  status          String                   @default("active")
+  ownerCustomerId String                   @map("owner_customer_id") @db.Uuid
+  metadata        Json                     @default("{}")
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  updatedAt       DateTime                 @updatedAt @map("updated_at")
+  owner           Customer                 @relation("WorkspaceOwner", fields: [ownerCustomerId], references: [id], onDelete: Restrict)
+  members         WorkspaceMember[]
+  productMembers  WorkspaceProductMember[]
+  entitlements    Entitlement[]
+  invitations     Invitation[]
+
+  @@index([ownerCustomerId])
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  customerId  String    @map("customer_id") @db.Uuid
+  role        String    @default("member")
+  status      String    @default("active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer    Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, customerId])
+  @@index([customerId, status])
+  @@map("workspace_members")
+}
+
+model WorkspaceProductMember {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  customerId  String    @map("customer_id") @db.Uuid
+  productKey  String    @map("product_key")
+  role        String    @default("member")
+  status      String    @default("active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer    Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  product     Product   @relation(fields: [productKey], references: [productKey], onDelete: Restrict)
+
+  @@unique([workspaceId, customerId, productKey])
+  @@index([customerId, productKey, status])
+  @@map("workspace_product_members")
+}
+
+model Invitation {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  email       String
+  role        String    @default("member")
+  productKeys Json      @default("[]") @map("product_keys")
+  status      String    @default("pending")
+  expiresAt   DateTime  @map("expires_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status])
+  @@index([email, status])
+  @@map("invitations")
+}
+
 model Entitlement {
   id                  String    @id @default(uuid()) @db.Uuid
-  customerId          String    @map("customer_id") @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid
+  customerId          String?   @map("customer_id") @db.Uuid
   productKey          String    @map("product_key")
   status              String
   plan                String    @default("free")
   source              String
+  seatsLimit          Int       @default(1) @map("seats_limit")
   startsAt            DateTime  @default(now()) @map("starts_at")
   endsAt              DateTime? @map("ends_at")
   trialEndsAt         DateTime? @map("trial_ends_at")
@@ -51,10 +128,12 @@ model Entitlement {
   metadata            Json      @default("{}")
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
-  customer            Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer            Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
   product             Product   @relation(fields: [productKey], references: [productKey], onDelete: Restrict)
 
-  @@unique([customerId, productKey])
+  @@unique([workspaceId, productKey])
+  @@index([customerId])
   @@map("entitlements")
 }
 
