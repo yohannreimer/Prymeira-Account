@@ -5,6 +5,7 @@ import { ZodError } from "zod";
 import { loadEnv } from "./env.js";
 import { ApiError, sendApiError } from "./lib/errors.js";
 import { accessRoutes } from "./modules/access/access.routes.js";
+import { adminRoutes } from "./modules/admin/admin.routes.js";
 import { createClerkAuthVerifier } from "./modules/auth/clerk.js";
 import type { AuthVerifier } from "./modules/auth/types.js";
 import { customersRoutes } from "./modules/customers/customers.routes.js";
@@ -56,6 +57,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
 
   await app.register(customersRoutes);
   await app.register(accessRoutes);
+  await app.register(adminRoutes);
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ApiError) {
