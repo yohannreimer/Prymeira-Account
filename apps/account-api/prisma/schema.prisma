@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id                String         @id @default(uuid()) @db.Uuid
+  clerkUserId       String         @unique @map("clerk_user_id")
+  email             String
+  name              String?
+  gatewayCustomerId String?        @map("gateway_customer_id")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+  entitlements      Entitlement[]
+  subscriptions     Subscription[]
+
+  @@map("customers")
+}
+
+model Product {
+  id           String        @id @default(uuid()) @db.Uuid
+  productKey   String        @unique @map("product_key")
+  name         String
+  description  String?
+  appUrl       String        @map("app_url")
+  marketingUrl String?       @map("marketing_url")
+  status       String        @default("active")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  entitlements Entitlement[]
+
+  @@map("products")
+}
+
+model Entitlement {
+  id                  String    @id @default(uuid()) @db.Uuid
+  customerId          String    @map("customer_id") @db.Uuid
+  productKey          String    @map("product_key")
+  status              String
+  plan                String    @default("free")
+  source              String
+  startsAt            DateTime  @default(now()) @map("starts_at")
+  endsAt              DateTime? @map("ends_at")
+  trialEndsAt         DateTime? @map("trial_ends_at")
+  currentPeriodEndsAt DateTime? @map("current_period_ends_at")
+  limits              Json      @default("{}")
+  metadata            Json      @default("{}")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  customer            Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  product             Product   @relation(fields: [productKey], references: [productKey], onDelete: Restrict)
+
+  @@unique([customerId, productKey])
+  @@map("entitlements")
+}
+
+model Subscription {
+  id                    String    @id @default(uuid()) @db.Uuid
+  customerId            String    @map("customer_id") @db.Uuid
+  gateway               String?
+  gatewaySubscriptionId String?   @map("gateway_subscription_id")
+  gatewayCustomerId     String?   @map("gateway_customer_id")
+  status                String
+  plan                  String
+  amountCents           Int?      @map("amount_cents")
+  currency              String    @default("BRL")
+  currentPeriodStart    DateTime? @map("current_period_start")
+  currentPeriodEnd      DateTime? @map("current_period_end")
+  cancelAtPeriodEnd     Boolean   @default(false) @map("cancel_at_period_end")
+  metadata              Json      @default("{}")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  customer              Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model AuditLog {
+  id               String   @id @default(uuid()) @db.Uuid
+  actorClerkUserId String?  @map("actor_clerk_user_id")
+  action           String
+  targetType       String   @map("target_type")
+  targetId         String   @map("target_id")
+  before           Json?
+  after            Json?
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@map("audit_logs")
+}
