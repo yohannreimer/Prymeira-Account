@@ -36,8 +36,9 @@ The API starts on `http://localhost:3001`.
 ## Environment Notes
 
 - `DATABASE_URL` must point to a running PostgreSQL database before starting the API.
-- `CORS_ORIGINS` is a comma-separated list of browser origins allowed to call the API.
+- `CORS_ORIGINS` is a comma-separated list of browser origins allowed to call the API. It controls browser requests that include an `Origin` header, so include every browser app URL that calls the API. Server-to-server and curl requests without an `Origin` header are allowed by the current CORS handling.
 - `PRYMEIRA_ACCOUNT_API_URL` is used by product apps and `@prymeira/auth` to call the account API.
+- `PRYMEIRA_PRODUCT_KEY` is the default product key used by product app integrations. The `.env.example` default is `operis` for the first integration.
 
 ## Health
 
@@ -50,6 +51,10 @@ Expected:
 ```json
 { "ok": true }
 ```
+
+## Verification Notes
+
+Final `typecheck`, `test`, and `build` checks passed for this task. Manual `/health` verification requires a reachable PostgreSQL database because Prisma connects during app startup. In this environment, manual `/health` verification was blocked by missing PostgreSQL at `localhost:5432`.
 
 ## Product Access Contract
 
