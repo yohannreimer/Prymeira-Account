@@ -1,22 +1,39 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { ZodError } from "zod";
+import { loadEnv } from "./env.js";
 import { ApiError, sendApiError } from "./lib/errors.js";
 import { prismaPlugin } from "./plugins/prisma.js";
 
 export async function buildApp() {
+  const env = loadEnv();
+  const allowedCorsOrigins = new Set(
+    env.CORS_ORIGINS.split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean)
+  );
+
   const app = Fastify({
     logger: {
       level: process.env.NODE_ENV === "test" ? "silent" : "info"
     }
   });
 
-  await app.register(cors, { origin: true });
+  await app.register(cors, {
+    origin(origin, callback) {
+      if (!origin || allowedCorsOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error("Origin is not allowed by CORS"), false);
+    }
+  });
   await app.register(prismaPlugin);
 
   app.get("/health", async () => ({ ok: true }));
 
-  app.setErrorHandler((error, _request, reply) => {
+  app.setErrorHandler((error, request, reply) => {
     if (error instanceof ApiError) {
       return sendApiError(reply, error);
     }
@@ -30,7 +47,7 @@ export async function buildApp() {
       });
     }
 
-    requestLogError(reply, error);
+    request.log.error(error);
     return reply.status(500).send({
       error: {
         code: "INTERNAL_ERROR",
@@ -40,8 +57,4 @@ export async function buildApp() {
   });
 
   return app;
-}
-
-function requestLogError(reply: { log?: { error: (error: unknown) => void } }, error: unknown) {
-  reply.log?.error(error);
 }
