@@ -6,11 +6,22 @@ import type { AuthenticatedUser, AuthVerifier } from "./types.js";
 export function createClerkAuthVerifier(): AuthVerifier {
   const env = loadEnv();
   const clerk = createClerkClient({ secretKey: env.CLERK_SECRET_KEY });
+  const authorizedParties = parseAuthorizedParties(env.CORS_ORIGINS);
 
   return {
     async verifyBearerToken(authorizationHeader) {
       const token = extractBearerToken(authorizationHeader);
-      const payload = await verifyToken(token, { secretKey: env.CLERK_SECRET_KEY });
+      let payload: Awaited<ReturnType<typeof verifyToken>>;
+
+      try {
+        payload = await verifyToken(token, {
+          secretKey: env.CLERK_SECRET_KEY,
+          ...(authorizedParties.length > 0 ? { authorizedParties } : {})
+        });
+      } catch {
+        throw new ApiError(401, "UNAUTHORIZED", "Authentication is required.");
+      }
+
       const clerkUserId = payload.sub;
 
       if (!clerkUserId) {
@@ -33,6 +44,13 @@ export function createClerkAuthVerifier(): AuthVerifier {
       } satisfies AuthenticatedUser;
     }
   };
+}
+
+function parseAuthorizedParties(value: string): string[] {
+  return value
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 }
 
 export function extractBearerToken(authorizationHeader: string | undefined): string {

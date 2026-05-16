@@ -10,7 +10,7 @@ export function parseAdminEmails(value: string): Set<string> {
 }
 
 export function assertAdminEmail(email: string, adminEmails: Set<string>) {
-  if (!adminEmails.has(email.toLowerCase())) {
+  if (!adminEmails.has(email.trim().toLowerCase())) {
     throw new ApiError(403, "FORBIDDEN", "Admin access is required.");
   }
 }
