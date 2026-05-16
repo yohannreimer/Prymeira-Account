@@ -1,0 +1,21 @@
+{
+  "name": "prymeira-account",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm --filter @prymeira/account-api dev",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "prisma:generate": "pnpm --filter @prymeira/account-api prisma:generate",
+    "prisma:migrate": "pnpm --filter @prymeira/account-api prisma:migrate",
+    "prisma:seed": "pnpm --filter @prymeira/account-api prisma:seed"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.18",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.3"
+  }
+}
