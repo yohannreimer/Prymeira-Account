@@ -53,12 +53,6 @@ export async function buildApp(options: BuildAppOptions = {}) {
 
   app.decorate("authVerifier", options.authVerifier ?? createClerkAuthVerifier());
 
-  app.get("/health", async () => ({ ok: true }));
-
-  await app.register(customersRoutes);
-  await app.register(accessRoutes);
-  await app.register(adminRoutes);
-
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ApiError) {
       return sendApiError(reply, error);
@@ -81,6 +75,12 @@ export async function buildApp(options: BuildAppOptions = {}) {
       }
     });
   });
+
+  app.get("/health", async () => ({ ok: true }));
+
+  await app.register(customersRoutes);
+  await app.register(accessRoutes);
+  await app.register(adminRoutes);
 
   return app;
 }

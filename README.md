@@ -15,9 +15,9 @@ Central account infrastructure for the Prymeira Digital multi-app ecosystem.
 pnpm install
 ```
 
-2. Create `.env` from `.env.example` and set real values.
+2. Create `.env` from `.env.example` and set real values. The Account API loads this file at startup for local development.
 
-3. Run Prisma:
+3. Run Prisma for local development:
 
 ```bash
 pnpm prisma:generate
@@ -36,6 +36,7 @@ The API starts on `http://localhost:3001`.
 ## Environment Notes
 
 - `DATABASE_URL` must point to a running PostgreSQL database before starting the API.
+- For production deployments, apply committed migrations with `pnpm --filter @prymeira/account-api exec prisma migrate deploy` instead of `pnpm prisma:migrate`, which runs `prisma migrate dev`.
 - `CORS_ORIGINS` is a comma-separated list of browser origins allowed to call the API. It controls browser requests that include an `Origin` header, so include every browser app URL that calls the API. Server-to-server and curl requests without an `Origin` header are allowed by the current CORS handling.
 - `PRYMEIRA_ACCOUNT_API_URL` is used by product apps and `@prymeira/auth` to call the account API.
 - `PRYMEIRA_PRODUCT_KEY` is the default product key used by product app integrations. The `.env.example` default is `operis` for the first integration.

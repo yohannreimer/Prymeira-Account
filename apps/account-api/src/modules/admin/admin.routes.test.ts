@@ -20,6 +20,40 @@ beforeEach(() => {
 });
 
 describe("adminRoutes", () => {
+  it("returns 403 when a non-admin user lists customers", async () => {
+    const nonAdminAuthVerifier: AuthVerifier = {
+      async verifyBearerToken() {
+        return {
+          clerkUserId: "user_non_admin",
+          email: "user@example.com"
+        };
+      }
+    };
+    const prisma = {
+      customer: {
+        findMany() {
+          throw new Error("customer list should not run for non-admin users");
+        }
+      }
+    } as unknown as PrismaClient;
+    const app = await buildApp({ authVerifier: nonAdminAuthVerifier, prisma });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/admin/customers",
+      headers: { authorization: "Bearer token" }
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({
+      error: {
+        code: "FORBIDDEN"
+      }
+    });
+
+    await app.close();
+  });
+
   it("returns customer audit logs for the customer and their entitlements", async () => {
     const calls: { auditFindMany?: unknown } = {};
     const customer = {
