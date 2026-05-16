@@ -116,7 +116,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       status: string;
       plan: string;
       source: string;
-      seatsLimit: number;
+      seatsLimit?: number;
       endsAt?: Date | null;
       trialEndsAt?: Date | null;
       currentPeriodEndsAt?: Date | null;
@@ -128,10 +128,13 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       status: input.status,
       plan: input.plan,
       source: input.source,
-      seatsLimit: input.seats_limit,
       limits: input.limits as Prisma.InputJsonValue,
       metadata: input.metadata as Prisma.InputJsonValue
     };
+
+    if (input.seats_limit !== undefined) {
+      entitlementInput.seatsLimit = input.seats_limit;
+    }
 
     if (Object.prototype.hasOwnProperty.call(input, "ends_at")) {
       entitlementInput.endsAt = toNullableDate(input.ends_at);

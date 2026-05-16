@@ -12,7 +12,7 @@ type UpsertEntitlementInput = {
   status: string;
   plan: string;
   source: string;
-  seatsLimit: number;
+  seatsLimit?: number;
   endsAt?: Date | null;
   trialEndsAt?: Date | null;
   currentPeriodEndsAt?: Date | null;
@@ -42,6 +42,8 @@ async function upsertEntitlementInTransaction(
     workspaceId_productKey: { workspaceId: input.workspaceId, productKey: input.productKey }
   };
   const before = await prisma.entitlement.findUnique({ where });
+  const createSeatsLimit = input.seatsLimit ?? 1;
+  const seatsLimitUpdate = input.seatsLimit !== undefined ? { seatsLimit: input.seatsLimit } : {};
   const nullableDates = {
     ...(input.endsAt !== undefined ? { endsAt: input.endsAt } : {}),
     ...(input.trialEndsAt !== undefined ? { trialEndsAt: input.trialEndsAt } : {}),
@@ -53,21 +55,23 @@ async function upsertEntitlementInTransaction(
   const entitlement = await prisma.entitlement.upsert({
     where,
     update: {
+      customerId: null,
       status: input.status,
       plan: input.plan,
       source: input.source,
-      seatsLimit: input.seatsLimit,
+      ...seatsLimitUpdate,
       ...nullableDates,
       limits: input.limits,
       metadata: input.metadata
     },
     create: {
       workspaceId: input.workspaceId,
+      customerId: null,
       productKey: input.productKey,
       status: input.status,
       plan: input.plan,
       source: input.source,
-      seatsLimit: input.seatsLimit,
+      seatsLimit: createSeatsLimit,
       ...nullableDates,
       limits: input.limits,
       metadata: input.metadata

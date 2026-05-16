@@ -335,6 +335,94 @@ describe("adminRoutes", () => {
     await app.close();
   });
 
+  it("preserves existing seats when seats_limit is omitted", async () => {
+    const calls: { upsert?: { update?: unknown; create?: unknown } } = {};
+    const prisma = {
+      $transaction<T>(callback: (tx: PrismaClient) => Promise<T>) {
+        return callback(prisma as unknown as PrismaClient);
+      },
+      workspace: {
+        findUnique() {
+          return { ownerCustomerId: customerId };
+        }
+      },
+      product: {
+        findUnique() {
+          return { productKey: "operis" };
+        }
+      },
+      entitlement: {
+        findUnique() {
+          return {
+            id: "entitlement_123",
+            workspaceId,
+            customerId,
+            productKey: "operis",
+            status: "active",
+            plan: "pro",
+            source: "admin",
+            seatsLimit: 12
+          };
+        },
+        upsert(args: { update?: unknown; create?: unknown }) {
+          calls.upsert = args;
+          return {
+            id: "entitlement_123",
+            workspaceId,
+            customerId: null,
+            productKey: "operis",
+            status: "blocked",
+            plan: "blocked",
+            source: "admin",
+            seatsLimit: 12
+          };
+        }
+      },
+      workspaceProductMember: {
+        upsert() {
+          return { id: "seat_123" };
+        }
+      },
+      auditLog: {
+        create() {
+          return { id: "audit_123" };
+        }
+      }
+    } as unknown as PrismaClient;
+    const app = await buildApp({ authVerifier, prisma });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/admin/entitlements",
+      headers: { authorization: "Bearer token" },
+      payload: {
+        workspace_id: workspaceId,
+        product_key: "operis",
+        status: "blocked",
+        plan: "blocked",
+        source: "admin"
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      entitlement: {
+        customerId: null,
+        seatsLimit: 12
+      }
+    });
+    expect(calls.upsert?.update).toMatchObject({
+      customerId: null
+    });
+    expect(calls.upsert?.update).not.toHaveProperty("seatsLimit");
+    expect(calls.upsert?.create).toMatchObject({
+      customerId: null,
+      seatsLimit: 1
+    });
+
+    await app.close();
+  });
+
   it("grants entitlement to a workspace and creates owner product seat", async () => {
     const { prisma, calls } = createEntitlementRoutePrisma();
     const app = await buildApp({ authVerifier, prisma });

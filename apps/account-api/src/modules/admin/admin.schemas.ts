@@ -16,7 +16,7 @@ export const upsertEntitlementSchema = z.object({
   status: z.enum(["active", "trial", "expired", "blocked", "cancelled", "internal"]),
   plan: z.string().min(1).default("free"),
   source: z.enum(["manual", "trial", "payment", "internal", "admin", "migration"]),
-  seats_limit: z.number().int().positive().max(1000).default(1),
+  seats_limit: z.number().int().positive().max(1000).optional(),
   ends_at: z.string().datetime().nullable().optional(),
   trial_ends_at: z.string().datetime().nullable().optional(),
   current_period_ends_at: z.string().datetime().nullable().optional(),

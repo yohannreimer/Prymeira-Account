@@ -228,6 +228,105 @@ describe("upsertEntitlement", () => {
     ]);
   });
 
+  it("clears stale customer ownership and preserves seats when updating without seatsLimit", async () => {
+    const staleCustomerId = "2fd3221f-5c92-4086-8e8a-8aa7a21c8b54";
+    const before = {
+      id: "entitlement_123",
+      workspaceId,
+      customerId: staleCustomerId,
+      productKey: "operis",
+      status: "active",
+      plan: "pro",
+      source: "admin",
+      seatsLimit: 9
+    };
+    const calls: {
+      entitlementUpsert?: {
+        update?: Record<string, unknown>;
+        create?: Record<string, unknown>;
+      };
+      auditCreate?: {
+        data?: {
+          before?: unknown;
+          after?: unknown;
+        };
+      };
+    } = {};
+    const prisma = {
+      $transaction<T>(callback: (tx: PrismaClient) => Promise<T>) {
+        return callback(prisma as unknown as PrismaClient);
+      },
+      workspace: {
+        findUnique() {
+          return { ownerCustomerId };
+        }
+      },
+      product: {
+        findUnique() {
+          return { productKey: "operis" };
+        }
+      },
+      entitlement: {
+        findUnique() {
+          return before;
+        },
+        upsert(args: { update?: Record<string, unknown>; create?: Record<string, unknown> }) {
+          calls.entitlementUpsert = args;
+          return {
+            ...before,
+            ...args.update,
+            customerId: null
+          };
+        }
+      },
+      workspaceProductMember: {
+        upsert() {
+          return { id: "seat_123" };
+        }
+      },
+      auditLog: {
+        create(args: { data?: { before?: unknown; after?: unknown } }) {
+          calls.auditCreate = args;
+          return { id: "audit_123" };
+        }
+      }
+    } as unknown as PrismaClient;
+
+    const entitlement = await upsertEntitlement(prisma, actor, {
+      workspaceId,
+      productKey: "operis",
+      status: "blocked",
+      plan: "blocked",
+      source: "admin",
+      limits: {},
+      metadata: {}
+    });
+
+    expect(calls.entitlementUpsert?.update).toMatchObject({
+      customerId: null,
+      status: "blocked",
+      plan: "blocked",
+      source: "admin"
+    });
+    expect(calls.entitlementUpsert?.update).not.toHaveProperty("seatsLimit");
+    expect(calls.entitlementUpsert?.create).toMatchObject({
+      customerId: null,
+      seatsLimit: 1
+    });
+    expect(calls.auditCreate?.data?.before).toMatchObject({
+      customerId: staleCustomerId,
+      seatsLimit: 9
+    });
+    expect(calls.auditCreate?.data?.after).toMatchObject({
+      customerId: null,
+      seatsLimit: 9
+    });
+    expect(entitlement).toMatchObject({
+      customerId: null,
+      seatsLimit: 9
+    });
+  });
+
   it("rejects missing workspaces before mutating entitlements", async () => {
     const operations: string[] = [];
     const tx = {
