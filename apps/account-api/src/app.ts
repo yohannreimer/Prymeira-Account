@@ -3,9 +3,23 @@ import cors from "@fastify/cors";
 import { ZodError } from "zod";
 import { loadEnv } from "./env.js";
 import { ApiError, sendApiError } from "./lib/errors.js";
+import { accessRoutes } from "./modules/access/access.routes.js";
+import { createClerkAuthVerifier } from "./modules/auth/clerk.js";
+import type { AuthVerifier } from "./modules/auth/types.js";
+import { customersRoutes } from "./modules/customers/customers.routes.js";
 import { prismaPlugin } from "./plugins/prisma.js";
 
-export async function buildApp() {
+declare module "fastify" {
+  interface FastifyInstance {
+    authVerifier: AuthVerifier;
+  }
+}
+
+type BuildAppOptions = {
+  authVerifier?: AuthVerifier;
+};
+
+export async function buildApp(options: BuildAppOptions = {}) {
   const env = loadEnv();
   const allowedCorsOrigins = new Set(
     env.CORS_ORIGINS.split(",")
@@ -31,7 +45,12 @@ export async function buildApp() {
   });
   await app.register(prismaPlugin);
 
+  app.decorate("authVerifier", options.authVerifier ?? createClerkAuthVerifier());
+
   app.get("/health", async () => ({ ok: true }));
+
+  await app.register(customersRoutes);
+  await app.register(accessRoutes);
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ApiError) {
