@@ -49,8 +49,21 @@ export const accessRoutes: FastifyPluginAsync = async (app) => {
     const user = await app.authVerifier.verifyBearerToken(request.headers.authorization);
     const customer = await findCustomerByClerkUserId(app.prisma, user.clerkUserId);
     const products = await listActiveProducts(app.prisma);
-    const entitlements = customer
-      ? await app.prisma.entitlement.findMany({ where: { customerId: customer.id } })
+    const workspaceMembership = customer
+      ? await app.prisma.workspaceMember.findFirst({
+          where: {
+            customerId: customer.id,
+            status: "active",
+            workspace: { status: "active" }
+          },
+          orderBy: { createdAt: "asc" },
+          select: { workspaceId: true }
+        })
+      : null;
+    const entitlements = workspaceMembership
+      ? await app.prisma.entitlement.findMany({
+          where: { workspaceId: workspaceMembership.workspaceId }
+        })
       : [];
     const now = new Date();
 

@@ -53,22 +53,42 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     const customer = await app.prisma.customer.findUnique({
       where: { id: params.id },
       include: {
-        entitlements: true,
-        subscriptions: true
+        subscriptions: true,
+        workspaceMembers: {
+          where: {
+            status: "active",
+            workspace: { status: "active" }
+          },
+          include: {
+            workspace: {
+              include: { entitlements: true }
+            }
+          }
+        }
       }
     });
+    const workspaceEntitlements = Array.from(
+      new Map(
+        customer?.workspaceMembers
+          .flatMap((membership) => membership.workspace.entitlements)
+          .map((entitlement) => [entitlement.id, entitlement]) ?? []
+      ).values()
+    );
+    const responseCustomer = customer
+      ? (({ workspaceMembers: _workspaceMembers, ...customerFields }) => ({
+          ...customerFields,
+          entitlements: workspaceEntitlements
+        }))(customer)
+      : null;
 
-    const auditTargetIds = [
-      params.id,
-      ...(customer?.entitlements.map((entitlement) => entitlement.id) ?? [])
-    ];
+    const auditTargetIds = [params.id, ...workspaceEntitlements.map((entitlement) => entitlement.id)];
     const audit_logs = await app.prisma.auditLog.findMany({
       where: { targetId: { in: auditTargetIds } },
       orderBy: { createdAt: "desc" },
       take: 25
     });
 
-    return { customer, audit_logs };
+    return { customer: responseCustomer, audit_logs };
   });
 
   app.post("/admin/entitlements", async (request) => {

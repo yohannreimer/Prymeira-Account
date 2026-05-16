@@ -58,12 +58,23 @@ describe("adminRoutes", () => {
     const calls: { auditFindMany?: unknown } = {};
     const customer = {
       id: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0",
-      entitlements: [{ id: "entitlement_1" }, { id: "entitlement_2" }],
-      subscriptions: []
+      subscriptions: [],
+      workspaceMembers: [
+        {
+          workspace: {
+            entitlements: [
+              { id: "entitlement_1", customerId: null, productKey: "financeiro" },
+              { id: "entitlement_2", customerId: null, productKey: "orquestrador" }
+            ]
+          }
+        }
+      ]
     };
+    let customerFindUniqueArgs: unknown;
     const prisma = {
       customer: {
-        findUnique() {
+        findUnique(args: unknown) {
+          customerFindUniqueArgs = args;
           return customer;
         }
       },
@@ -83,6 +94,30 @@ describe("adminRoutes", () => {
     });
 
     expect(response.statusCode).toBe(200);
+    expect(customerFindUniqueArgs).toMatchObject({
+      include: {
+        subscriptions: true,
+        workspaceMembers: {
+          where: {
+            status: "active",
+            workspace: { status: "active" }
+          },
+          include: {
+            workspace: {
+              include: { entitlements: true }
+            }
+          }
+        }
+      }
+    });
+    expect(response.json()).toMatchObject({
+      customer: {
+        entitlements: [
+          { id: "entitlement_1", customerId: null, productKey: "financeiro" },
+          { id: "entitlement_2", customerId: null, productKey: "orquestrador" }
+        ]
+      }
+    });
     expect(calls.auditFindMany).toMatchObject({
       where: { targetId: { in: [customer.id, "entitlement_1", "entitlement_2"] } },
       orderBy: { createdAt: "desc" },

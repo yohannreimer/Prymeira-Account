@@ -143,4 +143,82 @@ describe("accessRoutes", () => {
 
     await app.close();
   });
+
+  it("lists products with workspace entitlements even when entitlement customerId is null", async () => {
+    const customer = {
+      id: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0",
+      email: "user@example.com",
+      name: "User"
+    };
+    const calls: { entitlementFindMany?: unknown } = {};
+    const prisma = {
+      customer: {
+        findUnique() {
+          return customer;
+        }
+      },
+      product: {
+        findMany() {
+          return [
+            {
+              productKey: "financeiro",
+              name: "Financeiro",
+              description: "Gestao financeira.",
+              appUrl: "https://financeiro.example",
+              marketingUrl: "https://financeiro.example/upgrade",
+              status: "active"
+            }
+          ];
+        }
+      },
+      workspaceMember: {
+        findFirst() {
+          return { workspaceId: "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4" };
+        }
+      },
+      entitlement: {
+        findMany(args: unknown) {
+          calls.entitlementFindMany = args;
+          return [
+            {
+              customerId: null,
+              productKey: "financeiro",
+              status: "active",
+              plan: "pro",
+              source: "admin",
+              endsAt: null,
+              trialEndsAt: null,
+              currentPeriodEndsAt: null,
+              limits: {}
+            }
+          ];
+        }
+      }
+    } as unknown as PrismaClient;
+    const app = await buildApp({ authVerifier, prisma });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/me/products",
+      headers: { authorization: "Bearer token" }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(calls.entitlementFindMany).toMatchObject({
+      where: { workspaceId: "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4" }
+    });
+    expect(response.json()).toMatchObject({
+      products: [
+        {
+          product_key: "financeiro",
+          allowed: true,
+          status: "active",
+          plan: "pro",
+          reason: "active_entitlement"
+        }
+      ]
+    });
+
+    await app.close();
+  });
 });
