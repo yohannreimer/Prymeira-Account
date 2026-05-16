@@ -113,4 +113,3 @@ ALTER TABLE "entitlements" ADD CONSTRAINT "entitlements_product_key_fkey" FOREIG
 
 -- AddForeignKey
 ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
