@@ -17,23 +17,27 @@ export function createPrymeiraAuthClient(options: PrymeiraAuthClientOptions) {
     return response.json() as Promise<T>;
   }
 
-  return {
-    checkProductAccess(productKey: string, token: string) {
-      return getJson<AccessDecision>(`/access-check?product_key=${encodeURIComponent(productKey)}`, token);
-    },
+  function checkProductAccess(productKey: string, token: string) {
+    return getJson<AccessDecision>(`/access-check?product_key=${encodeURIComponent(productKey)}`, token);
+  }
 
-    async requireProductAccess(productKey: string, token: string) {
-      const decision = await this.checkProductAccess(productKey, token);
+  async function requireProductAccess(productKey: string, token: string) {
+    const decision = await checkProductAccess(productKey, token);
 
-      if (!decision.allowed) {
-        throw new ProductAccessDeniedError(decision);
-      }
-
-      return decision;
-    },
-
-    getCurrentCustomer(token: string) {
-      return getJson<CurrentCustomerResponse>("/me/products", token);
+    if (!decision.allowed) {
+      throw new ProductAccessDeniedError(decision);
     }
+
+    return decision;
+  }
+
+  function getCurrentCustomer(token: string) {
+    return getJson<CurrentCustomerResponse>("/me/products", token);
+  }
+
+  return {
+    checkProductAccess,
+    requireProductAccess,
+    getCurrentCustomer
   };
 }

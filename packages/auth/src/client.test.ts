@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { createPrymeiraAuthClient } from "./client.js";
-import { ProductAccessDeniedError } from "./errors.js";
+import { MissingAuthTokenError, ProductAccessDeniedError } from "./errors.js";
+import { checkPlanLimit, requireAuth, requireProductAccess } from "./server.js";
+import type { AccessDecision } from "./types.js";
 
 describe("createPrymeiraAuthClient", () => {
   it("calls access-check with bearer token", async () => {
@@ -32,5 +34,59 @@ describe("createPrymeiraAuthClient", () => {
     });
 
     await expect(client.requireProductAccess("operis", "token_123")).rejects.toBeInstanceOf(ProductAccessDeniedError);
+  });
+
+  it("allows destructured requireProductAccess to work", async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ allowed: true, product_key: "operis", status: "active", reason: "active_entitlement" }))
+    );
+
+    const { requireProductAccess } = createPrymeiraAuthClient({
+      accountApiUrl: "https://account-api.test",
+      fetch: fetchMock
+    });
+
+    const result = await requireProductAccess("operis", "token_123");
+
+    expect(result.allowed).toBe(true);
+  });
+});
+
+describe("server helpers", () => {
+  const deniedDecision: AccessDecision = {
+    allowed: false,
+    product_key: "operis",
+    reason: "no_entitlement",
+    status: "locked",
+    upgrade_url: "https://account.test/upgrade"
+  };
+
+  it("checkPlanLimit returns false when access is denied", () => {
+    expect(checkPlanLimit({ ...deniedDecision, limits: { projects: 10 } }, "projects", 1)).toBe(false);
+  });
+
+  it("throws MissingAuthTokenError when auth token is missing", async () => {
+    await expect(requireAuth({ getToken: () => null })).rejects.toBeInstanceOf(MissingAuthTokenError);
+  });
+
+  it("invokes void redirects but still rejects with ProductAccessDeniedError", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(deniedDecision)));
+    const redirect = vi.fn(() => undefined);
+
+    await expect(
+      requireProductAccess(
+        "operis",
+        {
+          getToken: () => "token_123",
+          redirect
+        },
+        {
+          accountApiUrl: "https://account-api.test",
+          fetch: fetchMock
+        }
+      )
+    ).rejects.toBeInstanceOf(ProductAccessDeniedError);
+
+    expect(redirect).toHaveBeenCalledWith("https://account.test/upgrade");
   });
 });

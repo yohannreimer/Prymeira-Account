@@ -26,7 +26,10 @@ export async function requireProductAccess(
     if (error instanceof ProductAccessDeniedError && context.redirect) {
       const target = error.decision.upgrade_url ?? options.upgradeUrl;
       if (target) {
-        return context.redirect(target);
+        const redirectResult = context.redirect(target);
+        if (redirectResult !== undefined) {
+          return redirectResult;
+        }
       }
     }
 
@@ -40,6 +43,10 @@ export async function getCurrentCustomer(context: PrymeiraAuthContext, options: 
 }
 
 export function checkPlanLimit(decision: AccessDecision, limitKey: string, requestedAmount: number): boolean {
+  if (!decision.allowed) {
+    return false;
+  }
+
   const value = decision.limits?.[limitKey];
 
   if (typeof value !== "number") {
