@@ -25,12 +25,12 @@ const fallbackPresentation: ProductPresentation = {
 export const productPresentationByKey: Record<string, ProductPresentation> = {
   operis: {
     accent: "#3b5b52",
-    category: "Segundo cerebro",
+    category: "Segundo cérebro",
     icon: Brain
   },
   orquestrador: {
     accent: "#1c8b61",
-    category: "Operacao tecnica",
+    category: "Operação técnica",
     icon: Settings2
   },
   financeiro: {
@@ -40,7 +40,7 @@ export const productPresentationByKey: Record<string, ProductPresentation> = {
   },
   media: {
     accent: "#9b5d2e",
-    category: "Video e midia",
+    category: "Vídeo e mídia",
     icon: Clapperboard
   },
   ads: {

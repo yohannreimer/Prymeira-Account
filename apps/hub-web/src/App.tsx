@@ -27,6 +27,7 @@ import {
   syncCurrentCustomer,
 } from "./api";
 import { AdminPanel } from "./AdminPanel";
+import { formatPlanLabel, formatRoleLabel, formatWorkspaceTypeLabel } from "./labels";
 import { readProductPresentation } from "./products";
 import type { AccountProductAccess, AccountProductsResponse } from "./types";
 import logomark from "./assets/prymeira-selo.png";
@@ -40,9 +41,9 @@ type ProductGroup = {
 };
 
 function statusLabel(product: AccountProductAccess) {
-  if (product.allowed && product.status === "trial") return "Trial";
-  if (product.allowed) return product.plan ? `Ativo - ${product.plan}` : "Ativo";
-  if (product.reason === "trial_expired") return "Trial expirado";
+  if (product.allowed && product.status === "trial") return "Teste";
+  if (product.allowed) return product.plan ? `Ativo - ${formatPlanLabel(product.plan)}` : "Ativo";
+  if (product.reason === "trial_expired") return "Teste expirado";
   if (product.status === "blocked") return "Bloqueado";
   return "Bloqueado";
 }
@@ -59,8 +60,8 @@ function productGroups(products: AccountProductAccess[]): ProductGroup[] {
   const locked = products.filter((product) => !product.allowed && product.status !== "trial");
   return [
     { title: "Produtos ativos", eyebrow: "Prontos para entrar", products: active },
-    { title: "Disponiveis para testar", eyebrow: "Proximas liberacoes", products: trial },
-    { title: "Bloqueados", eyebrow: "Assinatura ou liberacao pendente", products: locked },
+    { title: "Disponíveis para testar", eyebrow: "Próximas liberações", products: trial },
+    { title: "Bloqueados", eyebrow: "Assinatura ou liberação pendente", products: locked },
   ].filter((group) => group.products.length > 0);
 }
 
@@ -135,7 +136,7 @@ function ProductCard({ product }: { product: AccountProductAccess }) {
           </a>
         )}
         {product.workspace_role && (
-          <span className="pcard__meta">{product.workspace_role}</span>
+          <span className="pcard__meta">{formatRoleLabel(product.workspace_role)}</span>
         )}
       </div>
     </article>
@@ -209,10 +210,18 @@ function Hub() {
   const activeCount = data?.products.filter((p) => p.allowed).length ?? 0;
   const trialCount = data?.products.filter((p) => !p.allowed && p.status === "trial").length ?? 0;
   const lockedCount = data?.products.filter((p) => !p.allowed && p.status !== "trial").length ?? 0;
-  const plan = (data?.workspace as Record<string, unknown>)?.["plan"] as string | null ?? data?.workspace?.type ?? null;
+  const plan =
+    ((data?.workspace as Record<string, unknown>)?.["plan"] as string | null | undefined)
+    ?? data?.workspace?.type
+    ?? null;
   const displayName =
     user?.firstName ?? user?.fullName ?? data?.customer?.email ?? "Conta";
-  const workspaceName = data?.workspace?.name ?? "Workspace";
+  const workspaceName = data?.workspace?.name ?? "Área de trabalho";
+  const planLabel = plan
+    ? plan === data?.workspace?.type
+      ? formatWorkspaceTypeLabel(plan)
+      : formatPlanLabel(plan)
+    : "—";
 
   const initials = displayName
     .split(" ")
@@ -293,7 +302,7 @@ function Hub() {
           <div className="hub-hero__left">
             <div className="hub-hero__eyebrow">
               <span className="hub-hero__eyebrow-dot" />
-              Workspace · {workspaceName}
+              Área de trabalho · {workspaceName}
             </div>
             <h1 className="hub-hero__h1">
               Olá, <em>{displayName}.</em>
@@ -324,7 +333,7 @@ function Hub() {
               >
                 {trialCount}
               </div>
-              <div className="metric-card__lbl">Trials</div>
+              <div className="metric-card__lbl">Testes</div>
             </div>
             <div className="metric-card">
               <div
@@ -336,7 +345,7 @@ function Hub() {
             </div>
             <div className="metric-card metric-card--dark">
               <div className="metric-card__plan-label">Plano</div>
-              <div className="metric-card__plan-name">{plan ?? "—"}</div>
+              <div className="metric-card__plan-name">{planLabel}</div>
             </div>
           </div>
         </div>

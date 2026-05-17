@@ -20,6 +20,17 @@ import {
   syncCurrentCustomer,
   upsertAdminEntitlement,
 } from "./api";
+import {
+  formatAuditActionLabel,
+  formatPlanLabel,
+  formatProductLabel,
+  formatRoleLabel,
+  formatSourceLabel,
+  formatStatusLabel,
+  formatTargetTypeLabel,
+  formatWorkspaceTypeLabel,
+  planOptions,
+} from "./labels";
 import { productKeys } from "./products";
 import logomark from "./assets/prymeira-selo.png";
 import logotype from "./assets/prymeira-logo.png";
@@ -228,7 +239,7 @@ export function AdminPanel() {
           trial_days: trialDays,
         }),
       );
-      setNotice({ tone: "success", message: "Trial liberado." });
+      setNotice({ tone: "success", message: "Teste liberado." });
       if (selectedCustomerId) await loadCustomer(selectedCustomerId);
     } catch (error) {
       setNotice({ tone: "error", message: error instanceof Error ? error.message : String(error) });
@@ -248,7 +259,10 @@ export function AdminPanel() {
           reason: "manual_block",
         }),
       );
-      setNotice({ tone: "success", message: `${entitlement.productKey} bloqueado.` });
+      setNotice({
+        tone: "success",
+        message: `${formatProductLabel(entitlement.productKey)} bloqueado.`
+      });
       if (selectedCustomerId) await loadCustomer(selectedCustomerId);
     } catch (error) {
       setNotice({ tone: "error", message: error instanceof Error ? error.message : String(error) });
@@ -440,7 +454,9 @@ export function AdminPanel() {
                     <div className="admin-detail-tags">
                       <span className="admin-tag admin-tag--active">Ativo</span>
                       {workspace?.type && (
-                        <span className="admin-tag admin-tag--plan">{workspace.type}</span>
+                        <span className="admin-tag admin-tag--plan">
+                          {formatWorkspaceTypeLabel(workspace.type)}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -450,7 +466,7 @@ export function AdminPanel() {
               {/* Workspace selector */}
               {customer.workspaces.length > 1 && (
                 <div>
-                  <div className="admin-sec-title">Workspace</div>
+                  <div className="admin-sec-title">Área de trabalho</div>
                   <div className="admin-field">
                     <select
                       value={selectedWorkspaceId}
@@ -469,7 +485,7 @@ export function AdminPanel() {
               {/* Entitlements */}
               {workspace && workspace.entitlements.length > 0 && (
                 <div>
-                  <div className="admin-sec-title">Produtos & entitlements</div>
+                  <div className="admin-sec-title">Produtos e permissões</div>
                   <table className="admin-table">
                     <thead>
                       <tr>
@@ -488,15 +504,17 @@ export function AdminPanel() {
                               <div className="admin-ent-icon">
                                 <KeyRound size={13} aria-hidden="true" />
                               </div>
-                              <span className="admin-ent-name">{ent.productKey}</span>
+                              <span className="admin-ent-name">{formatProductLabel(ent.productKey)}</span>
                             </div>
                           </td>
                           <td>
                             <span className={`status-pill status-pill--${ent.status}`}>
-                              {ent.status}
+                              {formatStatusLabel(ent.status)}
                             </span>
                           </td>
-                          <td style={{ color: "var(--dim)", fontSize: 12 }}>{ent.plan ?? "—"}</td>
+                          <td style={{ color: "var(--dim)", fontSize: 12 }}>
+                            {formatPlanLabel(ent.plan)}
+                          </td>
                           <td style={{ color: "var(--muted)", fontSize: 11 }}>
                             {formatDate(ent.trialEndsAt ?? ent.endsAt ?? ent.currentPeriodEndsAt)}
                           </td>
@@ -533,8 +551,8 @@ export function AdminPanel() {
                           <strong>
                             {member.customer?.name ?? member.customer?.email ?? member.customerId}
                           </strong>{" "}
-                          — {member.role}
-                          {member.status ? ` (${member.status})` : ""}
+                          — {formatRoleLabel(member.role)}
+                          {member.status ? ` (${formatStatusLabel(member.status)})` : ""}
                         </span>
                       </div>
                     ))}
@@ -551,7 +569,7 @@ export function AdminPanel() {
                       <div key={sub.id} className="admin-log-item">
                         <span className="admin-log-dot admin-log-dot--gold" />
                         <span className="admin-log-text">
-                          <strong>{sub.plan}</strong> — {sub.status}
+                          <strong>{formatPlanLabel(sub.plan)}</strong> — {formatStatusLabel(sub.status)}
                           {sub.gateway ? ` via ${sub.gateway}` : ""}
                         </span>
                         <span className="admin-log-time">
@@ -580,7 +598,8 @@ export function AdminPanel() {
                           }`}
                         />
                         <span className="admin-log-text">
-                          <strong>{log.targetType}</strong> — {log.action}
+                          <strong>{formatTargetTypeLabel(log.targetType)}</strong> —{" "}
+                          {formatAuditActionLabel(log.action)}
                         </span>
                         <span className="admin-log-time">{formatDate(log.createdAt)}</span>
                       </div>
@@ -629,7 +648,7 @@ export function AdminPanel() {
               >
                 {productKeys.map((k) => (
                   <option key={k} value={k}>
-                    {k}
+                    {formatProductLabel(k)}
                   </option>
                 ))}
               </select>
@@ -643,13 +662,13 @@ export function AdminPanel() {
               >
                 {statusOptions.map((s) => (
                   <option key={s} value={s}>
-                    {s}
+                    {formatStatusLabel(s)}
                   </option>
                 ))}
               </select>
             </div>
             <div className="admin-field">
-              <label htmlFor="admin-source">Source</label>
+              <label htmlFor="admin-source">Origem</label>
               <select
                 id="admin-source"
                 value={source}
@@ -657,22 +676,27 @@ export function AdminPanel() {
               >
                 {sourceOptions.map((s) => (
                   <option key={s} value={s}>
-                    {s}
+                    {formatSourceLabel(s)}
                   </option>
                 ))}
               </select>
             </div>
             <div className="admin-field">
               <label htmlFor="admin-plan">Plano</label>
-              <input
+              <select
                 id="admin-plan"
-                type="text"
                 value={plan}
                 onChange={(e) => setPlan(e.target.value)}
-              />
+              >
+                {planOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {formatPlanLabel(option)}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="admin-field">
-              <label htmlFor="admin-seats">Seats</label>
+              <label htmlFor="admin-seats">Assentos</label>
               <input
                 id="admin-seats"
                 type="number"
@@ -692,12 +716,12 @@ export function AdminPanel() {
             </button>
           </form>
 
-          {/* Trial form */}
+          {/* Test form */}
           <form
             onSubmit={submitTrial}
             style={{ display: "flex", flexDirection: "column", gap: 8 }}
           >
-            <div className="admin-action-group-lbl">Trial</div>
+            <div className="admin-action-group-lbl">Teste</div>
             <div className="admin-field">
               <label htmlFor="admin-trial-days">Dias</label>
               <input
@@ -715,7 +739,7 @@ export function AdminPanel() {
               disabled={isLoading || !workspace}
             >
               <Clock3 size={13} aria-hidden="true" />
-              Conceder trial
+              Conceder teste
             </button>
           </form>
 

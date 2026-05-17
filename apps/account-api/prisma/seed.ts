@@ -11,28 +11,28 @@ const products = [
   {
     productKey: "operis",
     name: "Operis",
-    description: "Segundo cerebro, tarefas e organizacao pessoal.",
+    description: "Segundo cérebro, tarefas e organização pessoal.",
     appUrl: "https://operis.prymeiradigital.com.br",
     marketingUrl: "https://prymeiradigital.com.br/operis"
   },
   {
     productKey: "orquestrador",
     name: "Orquestrador",
-    description: "App tecnico de orquestracao.",
+    description: "App técnico de orquestração.",
     appUrl: "https://orquestrador.prymeiradigital.com.br",
     marketingUrl: "https://prymeiradigital.com.br/orquestrador"
   },
   {
     productKey: "financeiro",
     name: "Financeiro",
-    description: "Gestao financeira.",
+    description: "Gestão financeira.",
     appUrl: "https://financeiro.prymeiradigital.com.br",
     marketingUrl: "https://prymeiradigital.com.br/financeiro"
   },
   {
     productKey: "media",
     name: "Media AI",
-    description: "App de videos e midia.",
+    description: "App de vídeos e mídia.",
     appUrl: "https://media.prymeiradigital.com.br",
     marketingUrl: "https://prymeiradigital.com.br/media"
   },
