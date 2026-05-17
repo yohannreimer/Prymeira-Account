@@ -584,11 +584,13 @@ img { display: block; max-width: 100%; }
   gap: 0;
 }
 .login-brand__logo {
+  position: absolute;
+  top: 40px;
+  left: 52px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 48px;
+  gap: 10px;
 }
 .login-brand__logomark {
   width: 40px;
@@ -601,10 +603,10 @@ img { display: block; max-width: 100%; }
 }
 .login-brand__logotype {
   font-family: var(--font-serif);
-  font-size: 28px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--white);
-  letter-spacing: -0.5px;
+  letter-spacing: -0.3px;
 }
 .login-brand__headline {
   font-family: var(--font-serif);

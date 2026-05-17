@@ -445,7 +445,7 @@ function Landing() {
         </svg>
         <div className="login-brand__inner">
           <div className="login-brand__logo">
-            <Logomark size={64} />
+            <Logomark size={30} />
             <span className="login-brand__logotype">Prymeira</span>
           </div>
           <h1 className="login-brand__headline">
