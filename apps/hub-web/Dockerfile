@@ -9,13 +9,11 @@ COPY packages/auth/package.json packages/auth/package.json
 RUN pnpm install --frozen-lockfile
 
 COPY . .
-ARG VITE_CLERK_PUBLISHABLE_KEY
-ARG VITE_PRYMEIRA_ACCOUNT_API_URL=/api
-ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
-ENV VITE_PRYMEIRA_ACCOUNT_API_URL=$VITE_PRYMEIRA_ACCOUNT_API_URL
 RUN pnpm --filter @prymeira/hub-web build
 
 FROM nginx:1.27-alpine
 COPY apps/hub-web/nginx.conf /etc/nginx/conf.d/default.conf
+COPY apps/hub-web/docker-entrypoint.d/40-prymeira-runtime-config.sh /docker-entrypoint.d/40-prymeira-runtime-config.sh
 COPY --from=builder /app/apps/hub-web/dist /usr/share/nginx/html
+RUN chmod +x /docker-entrypoint.d/40-prymeira-runtime-config.sh
 EXPOSE 80

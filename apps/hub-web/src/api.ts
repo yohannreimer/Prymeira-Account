@@ -5,14 +5,9 @@ import type {
   AdminEntitlement,
   AdminSessionResponse
 } from "./types";
+import { accountApiUrl, resolveConfiguredProductUrl } from "./runtime-config";
 
-const env = import.meta.env as Record<string, string | undefined>;
-
-export const accountApiUrl = (
-  env.VITE_PRYMEIRA_ACCOUNT_API_URL
-    ?? env.PRYMEIRA_ACCOUNT_API_URL
-    ?? "http://localhost:3001"
-).replace(/\/$/, "");
+export { accountApiUrl };
 
 export async function fetchMyProducts(token: string): Promise<AccountProductsResponse> {
   const response = await fetch(`${accountApiUrl}/me/products`, {
@@ -117,6 +112,5 @@ export function grantAdminTrial(
 }
 
 export function resolveProductUrl(productKey: string, fallbackUrl: string | null | undefined) {
-  const overrideKey = `VITE_PRODUCT_${productKey.toUpperCase().replace(/[^A-Z0-9]/g, "_")}_URL`;
-  return env[overrideKey] ?? fallbackUrl ?? "#";
+  return resolveConfiguredProductUrl(productKey, fallbackUrl);
 }

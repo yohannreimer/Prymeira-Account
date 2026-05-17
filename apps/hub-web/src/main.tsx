@@ -1,9 +1,8 @@
 import { ClerkProvider } from "@clerk/clerk-react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { clerkPublishableKey } from "./runtime-config";
 
-const env = import.meta.env as Record<string, string | undefined>;
-const publishableKey = env.VITE_CLERK_PUBLISHABLE_KEY ?? env.CLERK_PUBLISHABLE_KEY;
 const root = document.getElementById("root");
 
 function MissingConfig() {
@@ -20,8 +19,8 @@ if (!root) {
 }
 
 createRoot(root).render(
-  publishableKey ? (
-    <ClerkProvider publishableKey={publishableKey}>
+  clerkPublishableKey ? (
+    <ClerkProvider publishableKey={clerkPublishableKey}>
       <App />
     </ClerkProvider>
   ) : (

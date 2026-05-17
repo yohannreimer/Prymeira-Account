@@ -39,8 +39,4 @@ ghcr.io/yohannreimer/prymeira-account-api:latest
 ghcr.io/yohannreimer/prymeira-hub-web:latest
 ```
 
-No GitHub, configure a variavel do repositorio:
-
-```txt
-VITE_CLERK_PUBLISHABLE_KEY=pk_test_ou_pk_live
-```
+O Hub recebe a publishable key em runtime pelo Portainer. Nao precisa colocar `VITE_CLERK_PUBLISHABLE_KEY` no GitHub Actions para buildar a imagem.

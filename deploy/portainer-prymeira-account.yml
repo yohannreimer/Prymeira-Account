@@ -62,6 +62,9 @@ services:
     networks:
       - network_swarm_public
       - prymeira_account_internal
+    environment:
+      VITE_CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
+      VITE_PRYMEIRA_ACCOUNT_API_URL: /api
     deploy:
       mode: replicated
       replicas: 1
