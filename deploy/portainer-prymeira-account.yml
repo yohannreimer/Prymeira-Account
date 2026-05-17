@@ -1,0 +1,96 @@
+version: "3.7"
+
+services:
+  prymeira_account_postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: prymeira_account
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${PRYMEIRA_POSTGRES_PASSWORD}
+    networks:
+      prymeira_account_internal:
+        aliases:
+          - postgres
+    volumes:
+      - prymeira_account_postgres_data:/var/lib/postgresql/data
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+          - node.hostname == manager01
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+
+  prymeira_account_api:
+    image: ghcr.io/yohannreimer/prymeira-account-api:latest
+    networks:
+      prymeira_account_internal:
+        aliases:
+          - prymeira_account_api
+          - account_api
+    environment:
+      DATABASE_URL: postgresql://postgres:${PRYMEIRA_POSTGRES_PASSWORD}@postgres:5432/prymeira_account
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
+      CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
+      ADMIN_EMAILS: ${ADMIN_EMAILS}
+      ADMIN_ACTION_TOKEN: ${ADMIN_ACTION_TOKEN}
+      CORS_ORIGINS: https://hub.prymeiradigital.com.br
+      PORT: 3001
+      NODE_ENV: production
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+          - node.hostname == manager01
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+
+  prymeira_hub_web:
+    image: ghcr.io/yohannreimer/prymeira-hub-web:latest
+    networks:
+      - network_swarm_public
+      - prymeira_account_internal
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+          - node.hostname == manager01
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=network_swarm_public
+        - traefik.http.routers.prymeira-hub.rule=Host(`hub.prymeiradigital.com.br`)
+        - traefik.http.routers.prymeira-hub.entrypoints=websecure
+        - traefik.http.routers.prymeira-hub.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.prymeira-hub.service=prymeira-hub
+        - traefik.http.services.prymeira-hub.loadbalancer.server.port=80
+
+volumes:
+  prymeira_account_postgres_data:
+    external: true
+    name: prymeira_account_postgres_data
+
+networks:
+  network_swarm_public:
+    external: true
+  prymeira_account_internal:
+    driver: overlay

@@ -16,6 +16,7 @@ beforeEach(() => {
   process.env.DATABASE_URL = "postgresql://example.test/account";
   process.env.CLERK_SECRET_KEY = "clerk_secret";
   process.env.ADMIN_EMAILS = "admin@example.com";
+  process.env.ADMIN_ACTION_TOKEN = "";
   process.env.NODE_ENV = "test";
 });
 
@@ -119,6 +120,86 @@ describe("adminRoutes", () => {
     expect(response.json()).toMatchObject({
       error: {
         code: "FORBIDDEN"
+      }
+    });
+
+    await app.close();
+  });
+
+  it("returns the current admin session", async () => {
+    const app = await buildApp({ authVerifier, prisma: {} as PrismaClient });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/admin/session",
+      headers: { authorization: "Bearer token" }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      admin: true,
+      email: "admin@example.com"
+    });
+
+    await app.close();
+  });
+
+  it("requires the admin action token for entitlement mutations when configured", async () => {
+    process.env.ADMIN_ACTION_TOKEN = "confirm-admin";
+    const { prisma, calls } = createEntitlementRoutePrisma();
+    const app = await buildApp({ authVerifier, prisma });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/admin/entitlements",
+      headers: { authorization: "Bearer token" },
+      payload: {
+        workspace_id: workspaceId,
+        product_key: "operis",
+        status: "active",
+        plan: "pro",
+        source: "admin"
+      }
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({
+      error: {
+        code: "FORBIDDEN",
+        message: "Valid admin action token is required."
+      }
+    });
+    expect(calls.entitlementUpsert).toBeUndefined();
+
+    await app.close();
+  });
+
+  it("accepts entitlement mutations with the matching admin action token", async () => {
+    process.env.ADMIN_ACTION_TOKEN = "confirm-admin";
+    const { prisma, calls } = createEntitlementRoutePrisma();
+    const app = await buildApp({ authVerifier, prisma });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/admin/entitlements",
+      headers: {
+        authorization: "Bearer token",
+        "x-admin-action-token": "confirm-admin"
+      },
+      payload: {
+        workspace_id: workspaceId,
+        product_key: "operis",
+        status: "active",
+        plan: "pro",
+        source: "admin"
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(calls.entitlementUpsert).toMatchObject({
+      create: {
+        workspaceId,
+        productKey: "operis"
       }
     });
 

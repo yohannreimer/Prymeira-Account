@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import type { Prisma } from "@prisma/client";
 import { loadEnv } from "../../env.js";
+import { ApiError } from "../../lib/errors.js";
 import { assertAdminEmail, parseAdminEmails } from "../auth/admin.js";
 import {
   blockEntitlementSchema,
@@ -16,13 +17,29 @@ import {
 } from "../entitlements/entitlements.service.js";
 
 export const adminRoutes: FastifyPluginAsync = async (app) => {
-  const adminEmails = parseAdminEmails(loadEnv().ADMIN_EMAILS);
+  const env = loadEnv();
+  const adminEmails = parseAdminEmails(env.ADMIN_EMAILS);
 
   async function requireAdmin(authorization: string | undefined) {
     const user = await app.authVerifier.verifyBearerToken(authorization);
     assertAdminEmail(user.email, adminEmails);
     return user;
   }
+
+  function requireAdminActionToken(header: string | string[] | undefined) {
+    const expectedToken = env.ADMIN_ACTION_TOKEN.trim();
+    if (!expectedToken) return;
+
+    const providedToken = Array.isArray(header) ? header[0] : header;
+    if (providedToken !== expectedToken) {
+      throw new ApiError(403, "FORBIDDEN", "Valid admin action token is required.");
+    }
+  }
+
+  app.get("/admin/session", async (request) => {
+    const user = await requireAdmin(request.headers.authorization);
+    return { admin: true, email: user.email };
+  });
 
   app.get("/admin/customers", async (request) => {
     await requireAdmin(request.headers.authorization);
@@ -106,6 +123,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
 
   app.post("/admin/entitlements", async (request) => {
     const user = await requireAdmin(request.headers.authorization);
+    requireAdminActionToken(request.headers["x-admin-action-token"]);
     const input = upsertEntitlementSchema.parse(request.body);
     const toNullableDate = (value: string | null | undefined) =>
       value == null ? null : new Date(value);
@@ -153,6 +171,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
 
   app.post("/admin/entitlements/block", async (request) => {
     const user = await requireAdmin(request.headers.authorization);
+    requireAdminActionToken(request.headers["x-admin-action-token"]);
     const input = blockEntitlementSchema.parse(request.body);
     const entitlement = await blockEntitlement(app.prisma, user, {
       workspaceId: input.workspace_id,
@@ -165,6 +184,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
 
   app.post("/admin/entitlements/trial", async (request) => {
     const user = await requireAdmin(request.headers.authorization);
+    requireAdminActionToken(request.headers["x-admin-action-token"]);
     const input = trialEntitlementSchema.parse(request.body);
     const entitlement = await grantTrialEntitlement(app.prisma, user, {
       workspaceId: input.workspace_id,

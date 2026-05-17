@@ -55,6 +55,8 @@ export const productPresentationByKey: Record<string, ProductPresentation> = {
   }
 };
 
+export const productKeys = Object.keys(productPresentationByKey);
+
 export function readProductPresentation(productKey: string) {
   return productPresentationByKey[productKey] ?? {
     ...fallbackPresentation,
