@@ -5,6 +5,7 @@ Central account infrastructure for the Prymeira Digital multi-app ecosystem.
 ## Packages
 
 - `apps/account-api`: Fastify API that owns customers, products, entitlements, admin mutations, and access checks.
+- `apps/hub-web`: central product hub for `app.prymeiradigital.com.br`.
 - `packages/auth`: reusable `@prymeira/auth` package for product apps.
 
 ## Local Setup
@@ -33,6 +34,14 @@ pnpm dev
 
 The API starts on `http://localhost:3001`.
 
+5. In another terminal, start the Hub:
+
+```bash
+pnpm dev:hub
+```
+
+The Hub starts on `http://localhost:5175` and calls the Account API at `PRYMEIRA_ACCOUNT_API_URL`.
+
 ## Environment Notes
 
 - `DATABASE_URL` must point to a running PostgreSQL database before starting the API.
@@ -40,6 +49,8 @@ The API starts on `http://localhost:3001`.
 - `CORS_ORIGINS` is a comma-separated list of browser origins allowed to call the API. It controls browser requests that include an `Origin` header, so include every browser app URL that calls the API. Server-to-server and curl requests without an `Origin` header are allowed by the current CORS handling.
 - `PRYMEIRA_ACCOUNT_API_URL` is used by product apps and `@prymeira/auth` to call the account API.
 - `PRYMEIRA_PRODUCT_KEY` is the default product key used by product app integrations. The `.env.example` default is `operis` for the first integration.
+- `CLERK_PUBLISHABLE_KEY` or `VITE_CLERK_PUBLISHABLE_KEY` is used by `apps/hub-web`.
+- `VITE_PRODUCT_<PRODUCT_KEY>_URL` can override product URLs locally, for example `VITE_PRODUCT_ORQUESTRADOR_URL=http://localhost:5173/m/tecnico`.
 
 ## Health
 
