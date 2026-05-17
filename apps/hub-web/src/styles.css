@@ -587,7 +587,6 @@ img { display: block; max-width: 100%; }
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 40px;
 }
 .login-brand__logomark {
   width: 40px;
@@ -674,6 +673,8 @@ img { display: block; max-width: 100%; }
 }
 
 /* Clerk component wrapper */
+.clerk-wrapper { width: 100%; }
+.clerk-wrapper > div { width: 100%; }
 .clerk-wrapper .cl-card {
   box-shadow: none !important;
   border: 1px solid var(--rule) !important;

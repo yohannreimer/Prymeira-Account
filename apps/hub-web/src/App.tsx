@@ -409,6 +409,7 @@ function Landing() {
     },
     elements: {
       card: { boxShadow: "none", border: "none", padding: 0 },
+      header: { display: "none" },
       formButtonPrimary: { backgroundColor: "#0c0c0c", color: "#ffffff" },
       socialButtonsBlockButton: { border: "1px solid #e5e5e5" },
     },
@@ -443,9 +444,18 @@ function Landing() {
           </g>
         </svg>
         <div className="login-brand__inner">
-          <div className="login-brand__logo">
-            <Logomark size={52} />
-            <span className="login-brand__logotype">Prymeira</span>
+          <div
+            style={{
+              background: "rgba(255,255,255,0.96)",
+              borderRadius: 12,
+              padding: "10px 22px",
+              display: "inline-flex",
+              alignItems: "center",
+              marginBottom: 40,
+              boxShadow: "0 2px 16px rgba(0,0,0,.18)",
+            }}
+          >
+            <img src={logotype} alt="Prymeira" height={30} style={{ display: "block" }} />
           </div>
           <h1 className="login-brand__headline">
             Todos os seus
