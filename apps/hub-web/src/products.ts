@@ -30,12 +30,12 @@ export const productPresentationByKey: Record<string, ProductPresentation> = {
   },
   orquestrador: {
     accent: "#1c8b61",
-    category: "Operação técnica",
+    category: "Gestão técnica",
     icon: Settings2
   },
   financeiro: {
     accent: "#3757a6",
-    category: "ERP financeiro",
+    category: "Gestão financeira",
     icon: BadgeDollarSign
   },
   media: {

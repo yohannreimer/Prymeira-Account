@@ -45,8 +45,8 @@ const workspaceTypeLabels: Record<string, string> = {
 
 const productLabels: Record<string, string> = {
   operis: "Operis",
-  orquestrador: "Orquestrador",
-  financeiro: "Financeiro",
+  orquestrador: "Velio",
+  financeiro: "Fluvia",
   media: "Media AI",
   ads: "Ads Vision",
   commerce: "Commerce Intel"

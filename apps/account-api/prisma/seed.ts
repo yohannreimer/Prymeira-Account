@@ -17,17 +17,17 @@ const products = [
   },
   {
     productKey: "orquestrador",
-    name: "Orquestrador",
-    description: "App técnico de orquestração.",
-    appUrl: "https://orquestrador.prymeiradigital.com.br",
-    marketingUrl: "https://prymeiradigital.com.br/orquestrador"
+    name: "Velio",
+    description: "Gestão de equipe técnica.",
+    appUrl: "https://velio.prymeiradigital.com.br",
+    marketingUrl: "https://prymeiradigital.com.br/velio"
   },
   {
     productKey: "financeiro",
-    name: "Financeiro",
+    name: "Fluvia",
     description: "Gestão financeira.",
-    appUrl: "https://financeiro.prymeiradigital.com.br",
-    marketingUrl: "https://prymeiradigital.com.br/financeiro"
+    appUrl: "https://fluvia.prymeiradigital.com.br",
+    marketingUrl: "https://prymeiradigital.com.br/fluvia"
   },
   {
     productKey: "media",
