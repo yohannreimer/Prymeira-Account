@@ -1,26 +1,28 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ClerkLoading,
+  SignIn,
+  SignUp,
   SignedIn,
   SignedOut,
-  SignInButton,
   UserButton,
   useAuth,
-  useUser
+  useUser,
 } from "@clerk/clerk-react";
 import {
   ArrowRight,
-  Building2,
-  CheckCircle2,
+  Bell,
+  ChevronDown,
+  Grid2X2,
   Lock,
   RefreshCw,
   ShieldCheck,
-  Sparkles
+  Sparkles,
 } from "lucide-react";
-import { accountApiUrl, fetchMyProducts, resolveProductUrl } from "./api";
+import { accountApiUrl, fetchAdminSession, fetchMyProducts, resolveProductUrl } from "./api";
+import { AdminPanel } from "./AdminPanel";
 import { readProductPresentation } from "./products";
 import type { AccountProductAccess, AccountProductsResponse } from "./types";
-import logo from "./assets/prymeira-horizontal.svg";
 import "./styles.css";
 
 type ProductGroup = {
@@ -50,17 +52,38 @@ function productGroups(products: AccountProductAccess[]): ProductGroup[] {
   return [
     { title: "Produtos ativos", eyebrow: "Prontos para entrar", products: active },
     { title: "Disponiveis para testar", eyebrow: "Proximas liberacoes", products: trial },
-    { title: "Bloqueados", eyebrow: "Assinatura ou liberacao pendente", products: locked }
+    { title: "Bloqueados", eyebrow: "Assinatura ou liberacao pendente", products: locked },
   ].filter((group) => group.products.length > 0);
 }
 
-function LoadingProducts() {
+function Logomark({ size = 32, radius = 7 }: { size?: number; radius?: number }) {
   return (
-    <div className="state-card">
-      <RefreshCw className="state-card__spin" size={18} aria-hidden="true" />
-      <span>Carregando seu hub...</span>
+    <div
+      style={{
+        width: size,
+        height: size,
+        background: "var(--gold)",
+        borderRadius: radius,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+      }}
+    >
+      <svg width={size * 0.65} height={size * 0.65} viewBox="0 0 22 22" fill="none">
+        <path d="M4 3h8C13.657 3 15 4.343 15 6v2c0 1.657-1.343 3-3 3H4V3z" fill="#0c0c0c" />
+        <rect x="4" y="11" width="3" height="8" fill="#0c0c0c" />
+        <circle cx="13" cy="6.5" r="1.8" fill="#FCC009" />
+      </svg>
     </div>
   );
+}
+
+function badgeClass(product: AccountProductAccess): string {
+  if (!product.allowed && product.status === "trial") return "pcard__badge--trial";
+  if (!product.allowed) return "pcard__badge--locked";
+  if (product.plan && product.plan !== "internal") return "pcard__badge--pro";
+  return "pcard__badge--active";
 }
 
 function ProductCard({ product }: { product: AccountProductAccess }) {
@@ -70,31 +93,41 @@ function ProductCard({ product }: { product: AccountProductAccess }) {
     ? resolveProductUrl(product.product_key, product.app_url)
     : product.upgrade_url ?? product.marketing_url ?? null;
   const disabled = !targetUrl || targetUrl === "#";
+  const isLocked = !product.allowed;
 
   return (
-    <article className={`product-card ${product.allowed ? "product-card--active" : "product-card--locked"}`}>
-      <div className="product-card__mark" style={{ "--product-accent": presentation.accent } as React.CSSProperties}>
-        <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
-      </div>
-      <div className="product-card__body">
-        <div className="product-card__meta">
-          <span>{presentation.category}</span>
-          <span>{statusLabel(product)}</span>
+    <article className={`pcard${isLocked ? " pcard--locked" : ""}`}>
+      <div className="pcard__top">
+        <div className="pcard__icon">
+          <Icon size={20} strokeWidth={1.7} aria-hidden="true" />
         </div>
-        <h3>{product.name}</h3>
-        <p>{product.description ?? "Produto Prymeira Digital conectado a sua conta central."}</p>
+        <span className={`pcard__badge ${badgeClass(product)}`}>{statusLabel(product)}</span>
       </div>
-      <div className="product-card__footer">
-        <span>{product.workspace_role ? `Workspace: ${product.workspace_role}` : product.reason}</span>
+      <div className="pcard__cat">{presentation.category}</div>
+      <div className="pcard__name">{product.name}</div>
+      <p className="pcard__desc">
+        {product.description ?? "Produto Prymeira conectado à sua conta central."}
+      </p>
+      <div className="pcard__footer">
         {disabled ? (
-          <button className="product-card__action" type="button" disabled>
+          <button className="pcard__btn pcard__btn--ghost" type="button" disabled>
             {actionLabel(product)}
           </button>
         ) : (
-          <a className="product-card__action" href={targetUrl}>
+          <a
+            className={`pcard__btn ${product.allowed ? "pcard__btn--gold" : "pcard__btn--ghost"}`}
+            href={targetUrl}
+          >
             {actionLabel(product)}
-            {product.allowed ? <ArrowRight size={14} aria-hidden="true" /> : <Lock size={13} aria-hidden="true" />}
+            {product.allowed ? (
+              <ArrowRight size={12} aria-hidden="true" />
+            ) : (
+              <Lock size={11} aria-hidden="true" />
+            )}
           </a>
+        )}
+        {product.workspace_role && (
+          <span className="pcard__meta">{product.workspace_role}</span>
         )}
       </div>
     </article>
@@ -102,17 +135,17 @@ function ProductCard({ product }: { product: AccountProductAccess }) {
 }
 
 function Hub() {
-  const { getToken, signOut } = useAuth();
+  const { getToken } = useAuth();
   const { user } = useUser();
   const [data, setData] = useState<AccountProductsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     let active = true;
     setIsLoading(true);
     setError(null);
-
     getToken()
       .then((token) => {
         if (!token) throw new Error("Sessao Clerk sem token.");
@@ -122,147 +155,377 @@ function Hub() {
         if (!active) return;
         setData(response);
       })
-      .catch((currentError: unknown) => {
+      .catch((err: unknown) => {
         if (!active) return;
-        setError(currentError instanceof Error ? currentError.message : String(currentError));
+        setError(err instanceof Error ? err.message : String(err));
       })
       .finally(() => {
         if (!active) return;
         setIsLoading(false);
       });
+    return () => {
+      active = false;
+    };
+  }, [getToken]);
 
+  useEffect(() => {
+    let active = true;
+    getToken()
+      .then((token) => {
+        if (!token) throw new Error("Sessao Clerk sem token.");
+        return fetchAdminSession(token);
+      })
+      .then(() => {
+        if (!active) return;
+        setIsAdmin(true);
+      })
+      .catch(() => {
+        if (!active) return;
+        setIsAdmin(false);
+      });
     return () => {
       active = false;
     };
   }, [getToken]);
 
   const groups = useMemo(() => productGroups(data?.products ?? []), [data]);
-  const activeCount = data?.products.filter((product) => product.allowed).length ?? 0;
-  const lockedCount = data?.products.filter((product) => !product.allowed).length ?? 0;
-  const displayName = user?.fullName ?? user?.primaryEmailAddress?.emailAddress ?? data?.customer?.email ?? "Conta Prymeira";
-  const workspaceName = data?.workspace?.name ?? "Workspace em preparacao";
+  const activeCount = data?.products.filter((p) => p.allowed).length ?? 0;
+  const trialCount = data?.products.filter((p) => !p.allowed && p.status === "trial").length ?? 0;
+  const lockedCount = data?.products.filter((p) => !p.allowed && p.status !== "trial").length ?? 0;
+  const plan = (data?.workspace as Record<string, unknown>)?.["plan"] as string | null ?? data?.workspace?.type ?? null;
+  const displayName =
+    user?.firstName ?? user?.fullName ?? data?.customer?.email ?? "Conta";
+  const workspaceName = data?.workspace?.name ?? "Workspace";
+
+  const initials = displayName
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   return (
     <div className="shell">
+      {/* TOPBAR */}
       <header className="topbar">
-        <a className="brand" href="/" aria-label="Prymeira App">
-          <img src={logo} alt="Prymeira" />
-        </a>
-        <div className="topbar__account">
-          <div>
+        <div className="topbar__logo">
+          <Logomark size={32} radius={7} />
+          <span className="topbar__logotype">Prymeira</span>
+        </div>
+        <div className="topbar__sep" />
+        <div className="topbar__workspace">
+          <span className="topbar__ws-dot" />
+          {workspaceName}
+        </div>
+        <nav className="topbar__nav" aria-label="Principal">
+          <span className="topbar__nav-item topbar__nav-item--active">Hub</span>
+          <a className="topbar__nav-item" href="/planos">
+            Planos
+          </a>
+          <a className="topbar__nav-item" href="/suporte">
+            Suporte
+          </a>
+        </nav>
+        <div className="topbar__right">
+          {isAdmin && (
+            <a href="/admin" className="topbar__admin-badge" aria-label="Painel admin">
+              <ShieldCheck size={11} aria-hidden="true" />
+              Admin
+            </a>
+          )}
+          <button className="topbar__icon-btn" aria-label="Notificações">
+            <Bell size={15} aria-hidden="true" />
+          </button>
+          <div className="topbar__user">
+            <div className="topbar__avatar" aria-hidden="true">
+              {initials}
+            </div>
             <span>{displayName}</span>
-            <strong>{workspaceName}</strong>
+            <ChevronDown size={11} aria-hidden="true" />
           </div>
           <UserButton afterSignOutUrl="/" />
         </div>
       </header>
 
-      <main className="hub-layout">
-        <section className="hero">
-          <div className="hero__copy">
-            <p className="eyebrow">app.prymeiradigital.com.br</p>
-            <h1>Prymeira App</h1>
-            <p>
-              Um hub central para entrar nos produtos liberados, acompanhar bloqueios e manter cada workspace no seu proprio territorio.
+      {/* HERO */}
+      <section className="hub-hero" aria-label="Resumo da conta">
+        <svg
+          className="topo-pattern"
+          viewBox="0 0 1120 220"
+          preserveAspectRatio="xMidYMid slice"
+          aria-hidden="true"
+        >
+          <g fill="none" stroke="#FCC009" strokeWidth=".9" opacity=".18">
+            <ellipse cx="980" cy="110" rx="400" ry="170" />
+            <ellipse cx="980" cy="110" rx="340" ry="138" />
+            <ellipse cx="980" cy="110" rx="280" ry="108" />
+            <ellipse cx="980" cy="110" rx="220" ry="80" />
+            <ellipse cx="980" cy="110" rx="160" ry="55" />
+            <ellipse cx="980" cy="110" rx="100" ry="34" />
+            <ellipse cx="980" cy="110" rx="46" ry="16" />
+            <ellipse cx="140" cy="200" rx="320" ry="140" />
+            <ellipse cx="140" cy="200" rx="260" ry="108" />
+            <ellipse cx="140" cy="200" rx="200" ry="80" />
+            <ellipse cx="140" cy="200" rx="140" ry="55" />
+            <ellipse cx="140" cy="200" rx="80" ry="32" />
+            <ellipse cx="560" cy="-30" rx="260" ry="130" />
+            <ellipse cx="560" cy="-30" rx="200" ry="98" />
+            <ellipse cx="560" cy="-30" rx="140" ry="68" />
+          </g>
+        </svg>
+        <div className="hub-hero__inner">
+          <div className="hub-hero__left">
+            <div className="hub-hero__eyebrow">
+              <span className="hub-hero__eyebrow-dot" />
+              Workspace · {workspaceName}
+            </div>
+            <h1 className="hub-hero__h1">
+              Olá, <em>{displayName}.</em>
+            </h1>
+            <p className="hub-hero__sub">
+              Acesse, gerencie e expanda seus produtos Prymeira. Tudo centralizado, tudo no seu
+              controle.
             </p>
-          </div>
-          <div className="hero__panel" aria-label="Resumo da conta">
-            <div className="hero__metric">
-              <CheckCircle2 size={17} aria-hidden="true" />
-              <span>{activeCount}</span>
-              <small>ativos</small>
-            </div>
-            <div className="hero__metric">
-              <Lock size={17} aria-hidden="true" />
-              <span>{lockedCount}</span>
-              <small>bloqueados</small>
-            </div>
-            <div className="hero__metric hero__metric--wide">
-              <Building2 size={17} aria-hidden="true" />
-              <span>{workspaceName}</span>
-              <small>{data?.workspace?.type ?? "workspace"}</small>
+            <div className="hub-hero__actions">
+              <a href="#produtos" className="hub-hero__cta-primary">
+                <Grid2X2 size={13} aria-hidden="true" />
+                Ver todos os apps
+              </a>
+              <a href="/planos" className="hub-hero__cta-secondary">
+                Gerenciar plano
+                <ArrowRight size={12} aria-hidden="true" />
+              </a>
             </div>
           </div>
-        </section>
-
-        {isLoading ? <LoadingProducts /> : null}
-
-        {error ? (
-          <div className="state-card state-card--error">
-            <ShieldCheck size={18} aria-hidden="true" />
-            <div>
-              <strong>Acesso nao carregado</strong>
-              <span>{error}</span>
-              <small>Account API: {accountApiUrl}</small>
+          <div className="hub-hero__metrics" aria-label="Métricas de acesso">
+            <div className="metric-card metric-card--gold">
+              <div className="metric-card__val">{activeCount}</div>
+              <div className="metric-card__lbl">Ativos</div>
+            </div>
+            <div className="metric-card">
+              <div
+                className={`metric-card__val${trialCount === 0 ? " metric-card__val--faint" : ""}`}
+              >
+                {trialCount}
+              </div>
+              <div className="metric-card__lbl">Trials</div>
+            </div>
+            <div className="metric-card">
+              <div
+                className={`metric-card__val${lockedCount === 0 ? " metric-card__val--faint" : ""}`}
+              >
+                {lockedCount}
+              </div>
+              <div className="metric-card__lbl">Bloqueados</div>
+            </div>
+            <div className="metric-card metric-card--dark">
+              <div className="metric-card__plan-label">Plano</div>
+              <div className="metric-card__plan-name">{plan ?? "—"}</div>
             </div>
           </div>
-        ) : null}
+        </div>
+      </section>
 
-        {!isLoading && !error && groups.length === 0 ? (
-          <div className="state-card">
-            <Sparkles size={18} aria-hidden="true" />
-            <span>Nenhum produto cadastrado para exibir.</span>
-          </div>
-        ) : null}
-
-        {groups.map((group) => (
-          <section className="product-section" key={group.title}>
-            <div className="section-heading">
-              <span>{group.eyebrow}</span>
-              <h2>{group.title}</h2>
+      {/* PRODUCTS */}
+      <main className="products-wrap" id="produtos">
+        <div className="products-wrap__inner">
+          {isLoading && (
+            <div className="state-card">
+              <RefreshCw size={16} className="state-card__spin" aria-hidden="true" />
+              <span>Carregando seus produtos...</span>
             </div>
-            <div className="product-grid">
-              {group.products.map((product) => (
-                <ProductCard key={product.product_key} product={product} />
-              ))}
+          )}
+          {error && (
+            <div className="state-card state-card--error" role="alert">
+              <ShieldCheck size={16} aria-hidden="true" />
+              <span>
+                {error} — {accountApiUrl}
+              </span>
             </div>
-          </section>
-        ))}
+          )}
+          {!isLoading && !error && groups.length === 0 && (
+            <div className="state-card">
+              <Sparkles size={16} aria-hidden="true" />
+              <span>Nenhum produto cadastrado para exibir.</span>
+            </div>
+          )}
+          {groups.map((group) => (
+            <section className="product-section" key={group.title}>
+              <div className="section-hd">
+                <span
+                  className={`section-hd__dot section-hd__dot--${
+                    group.title.includes("ativo")
+                      ? "green"
+                      : group.title.includes("testar")
+                        ? "amber"
+                        : "gray"
+                  }`}
+                />
+                <span className="section-hd__title">{group.title}</span>
+                <span className="section-hd__count">{group.products.length}</span>
+              </div>
+              <div
+                className={`product-grid${group.products.length <= 2 ? " product-grid--2" : ""}`}
+              >
+                {group.products.map((product) => (
+                  <ProductCard key={product.product_key} product={product} />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
       </main>
 
-      <footer className="footer">
-        <span>Clerk autentica. Account autoriza. Cada app obedece.</span>
-        <button type="button" onClick={() => signOut({ redirectUrl: "/" })}>Sair</button>
+      <footer className="hub-footer">
+        <span className="hub-footer__brand">Prymeira</span>
+        <div className="hub-footer__links">
+          <a className="hub-footer__link" href="/termos">
+            Termos de uso
+          </a>
+          <a className="hub-footer__link" href="/privacidade">
+            Privacidade
+          </a>
+          <a className="hub-footer__link" href="/suporte">
+            Suporte
+          </a>
+        </div>
       </footer>
     </div>
   );
 }
 
 function Landing() {
+  const [tab, setTab] = useState<"signin" | "signup">("signin");
+
+  const clerkAppearance = {
+    variables: {
+      colorPrimary: "#0c0c0c",
+      colorBackground: "#ffffff",
+      colorInputBackground: "#ffffff",
+      colorInputText: "#171717",
+      borderRadius: "7px",
+      fontFamily: "Inter, sans-serif",
+    },
+    elements: {
+      card: { boxShadow: "none", border: "none", padding: 0 },
+      formButtonPrimary: { backgroundColor: "#0c0c0c", color: "#ffffff" },
+      socialButtonsBlockButton: { border: "1px solid #e5e5e5" },
+    },
+  };
+
   return (
-    <div className="signed-out">
-      <div className="signed-out__panel">
-        <img src={logo} alt="Prymeira" />
-        <p className="eyebrow">Ecossistema modular</p>
-        <h1>Entre no seu hub Prymeira.</h1>
-        <p>Acesse produtos, trials e workspaces com uma conta central.</p>
-        <SignInButton mode="modal">
-          <button type="button">Entrar</button>
-        </SignInButton>
+    <div className="login-page">
+      {/* Left brand panel */}
+      <div className="login-brand">
+        <svg
+          className="topo-pattern"
+          viewBox="0 0 560 600"
+          preserveAspectRatio="xMidYMid slice"
+          aria-hidden="true"
+        >
+          <g fill="none" stroke="#FCC009" strokeWidth="1" opacity=".13">
+            <ellipse cx="280" cy="300" rx="500" ry="380" />
+            <ellipse cx="280" cy="300" rx="420" ry="318" />
+            <ellipse cx="280" cy="300" rx="340" ry="258" />
+            <ellipse cx="280" cy="300" rx="260" ry="198" />
+            <ellipse cx="280" cy="300" rx="180" ry="138" />
+            <ellipse cx="280" cy="300" rx="100" ry="78" />
+            <ellipse cx="280" cy="300" rx="40" ry="32" />
+            <ellipse cx="520" cy="60" rx="280" ry="160" />
+            <ellipse cx="520" cy="60" rx="210" ry="118" />
+            <ellipse cx="520" cy="60" rx="140" ry="78" />
+            <ellipse cx="520" cy="60" rx="70" ry="40" />
+            <ellipse cx="40" cy="540" rx="260" ry="150" />
+            <ellipse cx="40" cy="540" rx="190" ry="108" />
+            <ellipse cx="40" cy="540" rx="120" ry="68" />
+            <ellipse cx="40" cy="540" rx="50" ry="30" />
+          </g>
+        </svg>
+        <div className="login-brand__inner">
+          <div className="login-brand__logo">
+            <Logomark size={40} radius={9} />
+            <span className="login-brand__logotype">Prymeira</span>
+          </div>
+          <h1 className="login-brand__headline">
+            Todos os seus
+            <br />
+            apps em um
+            <br />
+            <em>único lugar.</em>
+          </h1>
+          <p className="login-brand__sub">
+            Gerencie acessos, planos e integrações de todos os seus produtos com um só login.
+          </p>
+        </div>
+      </div>
+
+      {/* Right form panel */}
+      <div className="login-form-panel">
+        <div className="login-form-inner">
+          <div className="login-tabs" role="tablist">
+            <button
+              role="tab"
+              aria-selected={tab === "signin"}
+              className={`login-tab${tab === "signin" ? " login-tab--active" : ""}`}
+              onClick={() => setTab("signin")}
+            >
+              Entrar
+            </button>
+            <button
+              role="tab"
+              aria-selected={tab === "signup"}
+              className={`login-tab${tab === "signup" ? " login-tab--active" : ""}`}
+              onClick={() => setTab("signup")}
+            >
+              Criar conta
+            </button>
+          </div>
+
+          <h2 className="login-title">
+            {tab === "signin" ? "Bem-vindo de volta" : "Crie sua conta"}
+          </h2>
+
+          <div className="clerk-wrapper">
+            {tab === "signin" ? (
+              <SignIn routing="virtual" appearance={clerkAppearance} />
+            ) : (
+              <SignUp routing="virtual" appearance={clerkAppearance} />
+            )}
+          </div>
+
+          <p className="login-terms">
+            Ao continuar, você concorda com os{" "}
+            <a href="/termos">Termos de uso</a> e{" "}
+            <a href="/privacidade">Política de privacidade</a>
+          </p>
+        </div>
+        <div className="login-footer-links">
+          <a href="/termos">Termos</a>
+          <a href="/privacidade">Privacidade</a>
+          <a href="/suporte">Suporte</a>
+        </div>
       </div>
     </div>
   );
 }
 
 export function App() {
+  const isAdminRoute = window.location.pathname.startsWith("/admin");
+
   return (
     <>
       <ClerkLoading>
-        <div className="signed-out">
-          <div className="signed-out__panel">
-            <img src={logo} alt="Prymeira" />
-            <p className="eyebrow">Carregando sessao</p>
-            <h1>Prymeira App</h1>
-            <p>Preparando sua conta central.</p>
+        <div className="page-loading">
+          <div className="page-loading__inner">
+            <Logomark size={40} radius={9} />
+            <RefreshCw size={18} className="page-loading__spin" />
           </div>
         </div>
       </ClerkLoading>
       <SignedOut>
         <Landing />
       </SignedOut>
-      <SignedIn>
-        <Hub />
-      </SignedIn>
+      <SignedIn>{isAdminRoute ? <AdminPanel /> : <Hub />}</SignedIn>
     </>
   );
 }
