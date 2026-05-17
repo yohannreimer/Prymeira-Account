@@ -443,11 +443,10 @@ function Landing() {
             <ellipse cx="40" cy="540" rx="50" ry="30" />
           </g>
         </svg>
+        <div className="login-brand__logo">
+          <Logomark size={36} />
+        </div>
         <div className="login-brand__inner">
-          <div className="login-brand__logo">
-            <Logomark size={30} />
-            <span className="login-brand__logotype">Prymeira</span>
-          </div>
           <h1 className="login-brand__headline">
             Todos os seus
             <br />
