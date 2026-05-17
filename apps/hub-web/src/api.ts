@@ -3,7 +3,8 @@ import type {
   AdminCustomerDetailResponse,
   AdminCustomerListItem,
   AdminEntitlement,
-  AdminSessionResponse
+  AdminSessionResponse,
+  SyncCustomerResponse
 } from "./types";
 import { accountApiUrl, resolveConfiguredProductUrl } from "./runtime-config";
 
@@ -22,6 +23,30 @@ export async function fetchMyProducts(token: string): Promise<AccountProductsRes
   }
 
   return response.json() as Promise<AccountProductsResponse>;
+}
+
+export async function syncCurrentCustomer(
+  token: string,
+  payload: {
+    clerk_user_id: string;
+    email: string;
+    name?: string;
+  }
+): Promise<SyncCustomerResponse> {
+  const response = await fetch(`${accountApiUrl}/customers/sync`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error(await readApiError(response, "Nao foi possivel sincronizar sua conta."));
+  }
+
+  return response.json() as Promise<SyncCustomerResponse>;
 }
 
 async function readApiError(response: Response, fallback: string) {

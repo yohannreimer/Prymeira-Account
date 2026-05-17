@@ -19,7 +19,13 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { accountApiUrl, fetchAdminSession, fetchMyProducts, resolveProductUrl } from "./api";
+import {
+  accountApiUrl,
+  fetchAdminSession,
+  fetchMyProducts,
+  resolveProductUrl,
+  syncCurrentCustomer,
+} from "./api";
 import { AdminPanel } from "./AdminPanel";
 import { readProductPresentation } from "./products";
 import type { AccountProductAccess, AccountProductsResponse } from "./types";
@@ -151,7 +157,16 @@ function Hub() {
     getToken()
       .then((token) => {
         if (!token) throw new Error("Sessao Clerk sem token.");
-        return fetchMyProducts(token);
+        const email = user?.primaryEmailAddress?.emailAddress;
+        if (!user?.id || !email) {
+          throw new Error("Perfil Clerk sem email principal.");
+        }
+
+        return syncCurrentCustomer(token, {
+          clerk_user_id: user.id,
+          email,
+          name: user.fullName ?? user.firstName ?? undefined,
+        }).then(() => fetchMyProducts(token));
       })
       .then((response) => {
         if (!active) return;
@@ -168,7 +183,7 @@ function Hub() {
     return () => {
       active = false;
     };
-  }, [getToken]);
+  }, [getToken, user?.firstName, user?.fullName, user?.id, user?.primaryEmailAddress?.emailAddress]);
 
   useEffect(() => {
     let active = true;

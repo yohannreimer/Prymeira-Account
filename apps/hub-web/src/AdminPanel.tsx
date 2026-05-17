@@ -17,6 +17,7 @@ import {
   fetchAdminCustomers,
   fetchAdminSession,
   grantAdminTrial,
+  syncCurrentCustomer,
   upsertAdminEntitlement,
 } from "./api";
 import { productKeys } from "./products";
@@ -110,6 +111,21 @@ export function AdminPanel() {
     }
   }
 
+  async function syncLoggedAdmin() {
+    const email = user?.primaryEmailAddress?.emailAddress;
+    if (!user?.id || !email) {
+      throw new Error("Perfil Clerk sem email principal.");
+    }
+
+    await withToken((token) =>
+      syncCurrentCustomer(token, {
+        clerk_user_id: user.id,
+        email,
+        name: user.fullName ?? user.firstName ?? undefined,
+      }),
+    );
+  }
+
   async function loadCustomer(customerId: string) {
     setIsLoading(true);
     setNotice(null);
@@ -133,7 +149,7 @@ export function AdminPanel() {
       .then(() => {
         if (!active) return;
         setIsAdmin(true);
-        return loadCustomers("");
+        return syncLoggedAdmin().then(() => loadCustomers(""));
       })
       .catch(() => {
         if (!active) return;
@@ -148,7 +164,7 @@ export function AdminPanel() {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getToken]);
+  }, [getToken, user?.firstName, user?.fullName, user?.id, user?.primaryEmailAddress?.emailAddress]);
 
   useEffect(() => {
     if (selectedCustomerId) {

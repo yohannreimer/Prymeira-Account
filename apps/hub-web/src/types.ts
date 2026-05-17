@@ -34,6 +34,13 @@ export type AccountProductsResponse = {
   products: AccountProductAccess[];
 };
 
+export type SyncCustomerResponse = {
+  customer_id: string;
+  clerk_user_id: string;
+  email: string;
+  workspace: AccountWorkspace;
+};
+
 export type AdminSessionResponse = {
   admin: boolean;
   email: string;
