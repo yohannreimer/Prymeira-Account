@@ -1,7 +1,7 @@
 import { ClerkProvider } from "@clerk/clerk-react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
-import { clerkPublishableKey } from "./runtime-config";
+import { loadClerkPublishableKey } from "./runtime-config";
 
 const root = document.getElementById("root");
 
@@ -18,12 +18,16 @@ if (!root) {
   throw new Error("Root element not found.");
 }
 
-createRoot(root).render(
-  clerkPublishableKey ? (
-    <ClerkProvider publishableKey={clerkPublishableKey}>
-      <App />
-    </ClerkProvider>
-  ) : (
-    <MissingConfig />
-  )
-);
+const rootRenderer = createRoot(root);
+
+void loadClerkPublishableKey().then((publishableKey) => {
+  rootRenderer.render(
+    publishableKey ? (
+      <ClerkProvider publishableKey={publishableKey}>
+        <App />
+      </ClerkProvider>
+    ) : (
+      <MissingConfig />
+    )
+  );
+});

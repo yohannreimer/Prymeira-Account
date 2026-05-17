@@ -28,3 +28,31 @@ export function resolveConfiguredProductUrl(
   const overrideKey = `VITE_PRODUCT_${productKey.toUpperCase().replace(/[^A-Z0-9]/g, "_")}_URL`;
   return readConfig(overrideKey) ?? fallbackUrl ?? "#";
 }
+
+export async function loadClerkPublishableKey() {
+  if (clerkPublishableKey) {
+    return clerkPublishableKey;
+  }
+
+  const response = await fetch(`${accountApiUrl}/public/config`, {
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return undefined;
+  }
+
+  const config = await response.json().catch(() => null) as {
+    clerk_publishable_key?: string;
+  } | null;
+  const loadedKey = config?.clerk_publishable_key?.trim();
+
+  if (loadedKey) {
+    window.__PRYMEIRA_CONFIG__ = {
+      ...window.__PRYMEIRA_CONFIG__,
+      VITE_CLERK_PUBLISHABLE_KEY: loadedKey
+    };
+  }
+
+  return loadedKey;
+}

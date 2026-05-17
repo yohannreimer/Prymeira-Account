@@ -77,6 +77,9 @@ export async function buildApp(options: BuildAppOptions = {}) {
   });
 
   app.get("/health", async () => ({ ok: true }));
+  app.get("/public/config", async () => ({
+    clerk_publishable_key: env.CLERK_PUBLISHABLE_KEY ?? ""
+  }));
 
   await app.register(customersRoutes);
   await app.register(accessRoutes);
