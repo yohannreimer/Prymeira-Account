@@ -23,6 +23,8 @@ import { accountApiUrl, fetchAdminSession, fetchMyProducts, resolveProductUrl } 
 import { AdminPanel } from "./AdminPanel";
 import { readProductPresentation } from "./products";
 import type { AccountProductAccess, AccountProductsResponse } from "./types";
+import logomark from "./assets/prymeira-selo.png";
+import logotype from "./assets/prymeira-logo.png";
 import "./styles.css";
 
 type ProductGroup = {
@@ -56,26 +58,26 @@ function productGroups(products: AccountProductAccess[]): ProductGroup[] {
   ].filter((group) => group.products.length > 0);
 }
 
-function Logomark({ size = 32, radius = 7 }: { size?: number; radius?: number }) {
+function Logomark({ size = 32 }: { size?: number }) {
   return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        background: "var(--gold)",
-        borderRadius: radius,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-      }}
-    >
-      <svg width={size * 0.65} height={size * 0.65} viewBox="0 0 22 22" fill="none">
-        <path d="M4 3h8C13.657 3 15 4.343 15 6v2c0 1.657-1.343 3-3 3H4V3z" fill="#0c0c0c" />
-        <rect x="4" y="11" width="3" height="8" fill="#0c0c0c" />
-        <circle cx="13" cy="6.5" r="1.8" fill="#FCC009" />
-      </svg>
-    </div>
+    <img
+      src={logomark}
+      alt="Prymeira"
+      width={size}
+      height={size}
+      style={{ display: "block", flexShrink: 0, objectFit: "contain" }}
+    />
+  );
+}
+
+function Logotype({ height = 22 }: { height?: number }) {
+  return (
+    <img
+      src={logotype}
+      alt="Prymeira"
+      height={height}
+      style={{ display: "block", flexShrink: 0, objectFit: "contain" }}
+    />
   );
 }
 
@@ -209,8 +211,7 @@ function Hub() {
       {/* TOPBAR */}
       <header className="topbar">
         <div className="topbar__logo">
-          <Logomark size={32} radius={7} />
-          <span className="topbar__logotype">Prymeira</span>
+          <Logotype height={22} />
         </div>
         <div className="topbar__sep" />
         <div className="topbar__workspace">
@@ -443,7 +444,7 @@ function Landing() {
         </svg>
         <div className="login-brand__inner">
           <div className="login-brand__logo">
-            <Logomark size={40} radius={9} />
+            <Logomark size={52} />
             <span className="login-brand__logotype">Prymeira</span>
           </div>
           <h1 className="login-brand__headline">
@@ -517,7 +518,7 @@ export function App() {
       <ClerkLoading>
         <div className="page-loading">
           <div className="page-loading__inner">
-            <Logomark size={40} radius={9} />
+            <Logomark size={48} />
             <RefreshCw size={18} className="page-loading__spin" />
           </div>
         </div>

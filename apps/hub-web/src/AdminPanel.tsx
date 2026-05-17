@@ -20,6 +20,8 @@ import {
   upsertAdminEntitlement,
 } from "./api";
 import { productKeys } from "./products";
+import logomark from "./assets/prymeira-selo.png";
+import logotype from "./assets/prymeira-logo.png";
 import type {
   AdminAuditLog,
   AdminCustomerDetail,
@@ -53,26 +55,15 @@ function selectedWorkspace(customer: AdminCustomerDetail | null, selectedWorkspa
   );
 }
 
-function Logomark({ size = 32, radius = 7 }: { size?: number; radius?: number }) {
+function Logomark({ size = 32 }: { size?: number }) {
   return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        background: "#FCC009",
-        borderRadius: radius,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-      }}
-    >
-      <svg width={size * 0.65} height={size * 0.65} viewBox="0 0 22 22" fill="none">
-        <path d="M4 3h8C13.657 3 15 4.343 15 6v2c0 1.657-1.343 3-3 3H4V3z" fill="#0c0c0c" />
-        <rect x="4" y="11" width="3" height="8" fill="#0c0c0c" />
-        <circle cx="13" cy="6.5" r="1.8" fill="#FCC009" />
-      </svg>
-    </div>
+    <img
+      src={logomark}
+      alt="Prymeira"
+      width={size}
+      height={size}
+      style={{ display: "block", flexShrink: 0, objectFit: "contain" }}
+    />
   );
 }
 
@@ -269,7 +260,7 @@ export function AdminPanel() {
     return (
       <div className="page-loading">
         <div className="page-loading__inner">
-          <Logomark size={40} radius={9} />
+          <Logomark size={48} />
           <RefreshCw size={18} className="page-loading__spin" />
         </div>
       </div>
@@ -295,8 +286,12 @@ export function AdminPanel() {
       {/* TOPBAR */}
       <header className="topbar">
         <div className="topbar__logo">
-          <Logomark size={32} radius={7} />
-          <span className="topbar__logotype">Prymeira</span>
+          <img
+            src={logotype}
+            alt="Prymeira"
+            height={22}
+            style={{ display: "block", flexShrink: 0, objectFit: "contain" }}
+          />
         </div>
         <div className="topbar__sep" />
         <div className="topbar__admin-badge">
