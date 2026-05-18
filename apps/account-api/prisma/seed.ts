@@ -11,21 +11,21 @@ const products = [
   {
     productKey: "operis",
     name: "Operis",
-    description: "Segundo cérebro, tarefas e organização pessoal.",
+    description: "O sistema operacional para quem executa com disciplina. Planejamento diário em blocos de tempo, rituais semanais de revisão estratégica, acompanhamento de hábitos com gamificação e check-ins via WhatsApp — tudo em um lugar para transformar intenção em resultado mensurável.",
     appUrl: "https://operis.prymeiradigital.com.br",
     marketingUrl: "https://prymeiradigital.com.br/operis"
   },
   {
     productKey: "orquestrador",
     name: "Velio",
-    description: "Gestão de equipe técnica.",
+    description: "Gerencie sua equipe técnica de ponta a ponta. Planeje agendas, atribua técnicos, acompanhe cada atendimento em tempo real e mantenha seus clientes informados pelo portal dedicado. Sua operação sempre sob controle.",
     appUrl: "https://velio.prymeiradigital.com.br",
     marketingUrl: "https://prymeiradigital.com.br/velio"
   },
   {
     productKey: "financeiro",
     name: "Fluvia",
-    description: "Gestão financeira.",
+    description: "Gestão financeira completa para o seu negócio. Controle contas a pagar e receber, acompanhe o fluxo de caixa, concilie extratos bancários e tome decisões com relatórios que mostram a saúde financeira da sua empresa em tempo real.",
     appUrl: "https://fluvia.prymeiradigital.com.br",
     marketingUrl: "https://prymeiradigital.com.br/fluvia"
   },
