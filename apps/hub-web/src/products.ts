@@ -28,7 +28,7 @@ export const productPresentationByKey: Record<string, ProductPresentation> = {
     accent: "#3b5b52",
     category: "Segundo cérebro",
     icon: Brain,
-    description: "Seu sistema pessoal de execução estratégica. Organize projetos, tarefas e planejamento diário em um só lugar — com gamificação, integração WhatsApp e relatórios que transformam planejamento em resultado."
+    description: "O sistema operacional para quem executa com disciplina. Planejamento diário em blocos de tempo, rituais semanais de revisão estratégica, acompanhamento de hábitos com gamificação e check-ins via WhatsApp — tudo em um lugar para transformar intenção em resultado mensurável."
   },
   orquestrador: {
     accent: "#1c8b61",
