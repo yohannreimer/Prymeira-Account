@@ -12,7 +12,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:seed": "tsx prisma/seed.ts",
+    "grant:product-access": "tsx src/scripts/grant-product-access.ts"
   },
   "dependencies": {
     "@clerk/backend": "^1.34.0",
