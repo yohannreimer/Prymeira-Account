@@ -27,7 +27,7 @@ import {
   syncCurrentCustomer,
 } from "./api";
 import { AdminPanel } from "./AdminPanel";
-import { formatPlanLabel, formatRoleLabel, formatWorkspaceTypeLabel } from "./labels";
+import { formatPlanLabel, formatProductLabel, formatRoleLabel, formatWorkspaceTypeLabel } from "./labels";
 import { readProductPresentation } from "./products";
 import type { AccountProductAccess, AccountProductsResponse } from "./types";
 import logomark from "./assets/prymeira-selo.png";
@@ -113,9 +113,9 @@ function ProductCard({ product }: { product: AccountProductAccess }) {
         <span className={`pcard__badge ${badgeClass(product)}`}>{statusLabel(product)}</span>
       </div>
       <div className="pcard__cat">{presentation.category}</div>
-      <div className="pcard__name">{product.name}</div>
+      <div className="pcard__name">{product.name || formatProductLabel(product.product_key)}</div>
       <p className="pcard__desc">
-        {product.description ?? "Produto Prymeira conectado à sua conta central."}
+        {product.description ?? presentation.description ?? "Produto Prymeira conectado à sua conta central."}
       </p>
       <div className="pcard__footer">
         {disabled ? (
