@@ -31,10 +31,10 @@ const products = [
   },
   {
     productKey: "media",
-    name: "Media AI",
-    description: "App de vídeos e mídia.",
-    appUrl: "https://media.prymeiradigital.com.br",
-    marketingUrl: "https://prymeiradigital.com.br/media"
+    name: "Flowcut",
+    description: "Transforme vídeos longos em cortes prontos para publicar. O Flowcut organiza upload, corte com IA, transcrição, pacote para YouTube e publicação em um fluxo único para acelerar produção de conteúdo.",
+    appUrl: "https://flowcut.prymeiradigital.com.br",
+    marketingUrl: "https://prymeiradigital.com.br/flowcut"
   },
   {
     productKey: "ads",

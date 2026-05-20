@@ -45,7 +45,8 @@ export const productPresentationByKey: Record<string, ProductPresentation> = {
   media: {
     accent: "#9b5d2e",
     category: "Vídeo e mídia",
-    icon: Clapperboard
+    icon: Clapperboard,
+    description: "Transforme vídeos longos em cortes prontos para publicar. O Flowcut organiza upload, corte com IA, transcrição, pacote para YouTube e publicação em um fluxo único para acelerar produção de conteúdo."
   },
   ads: {
     accent: "#8a3f54",

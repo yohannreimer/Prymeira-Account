@@ -47,7 +47,7 @@ const productLabels: Record<string, string> = {
   operis: "Operis",
   orquestrador: "Velio",
   financeiro: "Fluvia",
-  media: "Media AI",
+  media: "Flowcut",
   ads: "Ads Vision",
   commerce: "Commerce Intel"
 };
