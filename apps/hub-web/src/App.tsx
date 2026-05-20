@@ -638,24 +638,17 @@ function Landing() {
   const clerkAppearance = {
     variables: {
       colorPrimary: "#0c0c0c",
-      colorBackground: "#faf8f3",
+      colorBackground: "#ffffff",
       colorInputBackground: "#ffffff",
       colorInputText: "#171717",
-      colorText: "#171717",
-      colorTextSecondary: "#6b7280",
-      borderRadius: "9px",
+      borderRadius: "7px",
       fontFamily: "Inter, sans-serif",
-      fontSize: "14px",
     },
     elements: {
-      rootBox: { width: "100%" },
-      card: { boxShadow: "none", border: "none", padding: 0, background: "transparent" },
+      card: { boxShadow: "none", border: "none", padding: 0 },
       header: { display: "none" },
-      formButtonPrimary: { backgroundColor: "#0c0c0c", color: "#ffffff", fontWeight: "600" },
-      socialButtonsBlockButton: { border: "1px solid #e5e5e5", background: "#ffffff" },
-      formFieldInput: { background: "#ffffff", border: "1px solid #e5e5e5" },
-      footer: { background: "transparent" },
-      footerAction: { background: "transparent" },
+      formButtonPrimary: { backgroundColor: "#0c0c0c", color: "#ffffff" },
+      socialButtonsBlockButton: { border: "1px solid #e5e5e5" },
     },
   };
 
@@ -732,9 +725,9 @@ function Landing() {
 
           <div className="clerk-wrapper">
             {tab === "signin" ? (
-              <SignIn routing="hash" appearance={clerkAppearance} />
+              <SignIn routing="virtual" appearance={clerkAppearance} />
             ) : (
-              <SignUp routing="hash" appearance={clerkAppearance} />
+              <SignUp routing="virtual" appearance={clerkAppearance} />
             )}
           </div>
 
