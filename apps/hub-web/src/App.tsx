@@ -54,52 +54,6 @@ function actionLabel(product: AccountProductAccess) {
   return product.marketing_url || product.upgrade_url ? "Conhecer" : "Indisponivel";
 }
 
-function accessReasonLabel(reason: string | null) {
-  const labels: Record<string, string> = {
-    no_customer: "Sua conta ainda não foi sincronizada com a Prymeira Account.",
-    no_entitlement: "Este produto ainda não foi liberado para o seu workspace.",
-    expired: "A permissão deste produto expirou.",
-    blocked: "Este produto está bloqueado para o seu workspace.",
-    cancelled: "A assinatura deste produto foi cancelada.",
-    trial_expired: "O período de teste deste produto terminou.",
-    product_access_denied: "A Prymeira Account não encontrou uma liberação ativa para este produto.",
-    account_api_error: "Não foi possível confirmar a liberação deste produto agora."
-  };
-
-  return reason ? labels[reason] ?? "Este produto ainda não está liberado para a sua conta." : "Este produto ainda não está liberado para a sua conta.";
-}
-
-function readAccessDeniedQuery() {
-  const params = new URLSearchParams(window.location.search);
-  return {
-    productKey: params.get("product_key")?.trim() || "operis",
-    reason: params.get("reason")?.trim() || null,
-    returnUrl: safeReturnUrl(params.get("return_url"))
-  };
-}
-
-function safeReturnUrl(value: string | null) {
-  if (!value) return null;
-
-  try {
-    const url = new URL(value);
-    const host = url.hostname.toLowerCase();
-    const isPrymeiraHost = host === "prymeiradigital.com.br" || host.endsWith(".prymeiradigital.com.br");
-    const isLocalHost = host === "localhost" || host === "127.0.0.1";
-    return isPrymeiraHost || isLocalHost ? url.toString() : null;
-  } catch {
-    return null;
-  }
-}
-
-function checkoutUrl(product: AccountProductAccess | null, productKey: string) {
-  return (
-    product?.upgrade_url
-    ?? product?.marketing_url
-    ?? `/planos?product_key=${encodeURIComponent(productKey)}`
-  );
-}
-
 function productGroups(products: AccountProductAccess[]): ProductGroup[] {
   const active = products.filter((product) => product.allowed);
   const trial = products.filter((product) => !product.allowed && product.status === "trial");
@@ -159,9 +113,9 @@ function ProductCard({ product }: { product: AccountProductAccess }) {
         <span className={`pcard__badge ${badgeClass(product)}`}>{statusLabel(product)}</span>
       </div>
       <div className="pcard__cat">{presentation.category}</div>
-      <div className="pcard__name">{formatProductLabel(product.product_key) || product.name}</div>
+      <div className="pcard__name">{product.name || formatProductLabel(product.product_key)}</div>
       <p className="pcard__desc">
-        {presentation.description ?? product.description ?? "Produto Prymeira conectado à sua conta central."}
+        {product.description ?? presentation.description ?? "Produto Prymeira conectado à sua conta central."}
       </p>
       <div className="pcard__footer">
         {disabled ? (
@@ -186,187 +140,6 @@ function ProductCard({ product }: { product: AccountProductAccess }) {
         )}
       </div>
     </article>
-  );
-}
-
-function AccessDeniedPage() {
-  const { getToken } = useAuth();
-  const { user } = useUser();
-  const [{ productKey, reason, returnUrl }] = useState(readAccessDeniedQuery);
-  const [data, setData] = useState<AccountProductsResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-    setIsLoading(true);
-    setError(null);
-    getToken()
-      .then((token) => {
-        if (!token) throw new Error("Sessao Clerk sem token.");
-        const email = user?.primaryEmailAddress?.emailAddress;
-        if (!user?.id || !email) {
-          throw new Error("Perfil Clerk sem email principal.");
-        }
-
-        return syncCurrentCustomer(token, {
-          clerk_user_id: user.id,
-          email,
-          name: user.fullName ?? user.firstName ?? undefined,
-        }).then(() => fetchMyProducts(token));
-      })
-      .then((response) => {
-        if (!active) return;
-        setData(response);
-      })
-      .catch((err: unknown) => {
-        if (!active) return;
-        setError(err instanceof Error ? err.message : String(err));
-      })
-      .finally(() => {
-        if (!active) return;
-        setIsLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [getToken, user?.firstName, user?.fullName, user?.id, user?.primaryEmailAddress?.emailAddress]);
-
-  const product = data?.products.find((item) => item.product_key === productKey) ?? null;
-  const presentation = readProductPresentation(productKey);
-  const Icon = presentation.icon;
-  const productName = formatProductLabel(productKey) || product?.name || productKey;
-  const isAllowed = product?.allowed === true;
-  const appUrl = isAllowed ? resolveProductUrl(productKey, product?.app_url ?? returnUrl ?? "#") : null;
-  const primaryUrl = isAllowed ? appUrl : checkoutUrl(product, productKey);
-  const displayName = user?.firstName ?? user?.fullName ?? data?.customer?.email ?? "Conta";
-  const workspaceName = data?.workspace?.name ?? "Área de trabalho";
-
-  return (
-    <div className="shell access-shell">
-      <header className="topbar">
-        <div className="topbar__logo">
-          <Logotype height={22} />
-        </div>
-        <div className="topbar__sep" />
-        <div className="topbar__workspace">
-          <span className="topbar__ws-dot" />
-          {workspaceName}
-        </div>
-        <div className="topbar__right">
-          <a href="/" className="topbar__back-btn">
-            Voltar ao Hub
-          </a>
-          <UserButton afterSignOutUrl="/" />
-        </div>
-      </header>
-
-      <main className="access-page">
-        <svg
-          className="topo-pattern"
-          viewBox="0 0 1120 520"
-          preserveAspectRatio="xMidYMid slice"
-          aria-hidden="true"
-        >
-          <g fill="none" stroke="#FCC009" strokeWidth=".9" opacity=".16">
-            <ellipse cx="970" cy="190" rx="470" ry="210" />
-            <ellipse cx="970" cy="190" rx="390" ry="172" />
-            <ellipse cx="970" cy="190" rx="310" ry="136" />
-            <ellipse cx="970" cy="190" rx="230" ry="98" />
-            <ellipse cx="160" cy="380" rx="360" ry="164" />
-            <ellipse cx="160" cy="380" rx="290" ry="130" />
-            <ellipse cx="160" cy="380" rx="210" ry="94" />
-            <ellipse cx="560" cy="-20" rx="300" ry="142" />
-            <ellipse cx="560" cy="-20" rx="220" ry="104" />
-          </g>
-        </svg>
-        <section className="access-hero">
-          <div className="access-hero__copy">
-            <div className="hub-hero__eyebrow">
-              <span className={`hub-hero__eyebrow-dot${isAllowed ? "" : " hub-hero__eyebrow-dot--amber"}`} />
-              Acesso de produto · {presentation.category}
-            </div>
-            <h1 className="access-hero__title">
-              {isAllowed ? (
-                <>
-                  Acesso ao <em>{productName}</em> liberado.
-                </>
-              ) : (
-                <>
-                  Seu acesso ao <em>{productName}</em> ainda não está liberado.
-                </>
-              )}
-            </h1>
-            <p className="access-hero__text">
-              {isAllowed
-                ? "A Prymeira Account confirmou sua permissão. Você pode voltar para o produto ou continuar gerenciando tudo pelo Hub."
-                : `${accessReasonLabel(reason ?? product?.reason ?? null)} Login, workspace e permissões ficam centralizados para manter cada app no seu próprio território.`}
-            </p>
-            {error && (
-              <div className="access-alert" role="alert">
-                <ShieldCheck size={15} aria-hidden="true" />
-                {error} — {accountApiUrl}
-              </div>
-            )}
-            <div className="access-hero__actions">
-              <a className="access-cta access-cta--primary" href={primaryUrl ?? "/"}>
-                {isAllowed ? "Abrir produto" : "Comprar agora"}
-                <ArrowRight size={14} aria-hidden="true" />
-              </a>
-              <a className="access-cta access-cta--secondary" href="/">
-                Voltar ao Hub
-              </a>
-              {returnUrl && !isAllowed && (
-                <a className="access-cta access-cta--text" href={returnUrl}>
-                  Tentar novamente
-                </a>
-              )}
-            </div>
-          </div>
-
-          <aside className="access-card" aria-label="Resumo do produto">
-            <div className="access-card__icon">
-              <Icon size={25} strokeWidth={1.7} aria-hidden="true" />
-            </div>
-            <div className="access-card__category">{presentation.category}</div>
-            <h2 className="access-card__title">{productName}</h2>
-            <p className="access-card__desc">
-              {presentation.description ?? product?.description ?? "Produto Prymeira conectado à sua conta central."}
-            </p>
-            <div className="access-card__facts">
-              <div>
-                <span>Status</span>
-                <strong>{isLoading ? "Verificando" : product ? statusLabel(product) : "Pendente"}</strong>
-              </div>
-              <div>
-                <span>Plano</span>
-                <strong>{product?.plan ? formatPlanLabel(product.plan) : "A definir"}</strong>
-              </div>
-              <div>
-                <span>Conta</span>
-                <strong>{displayName}</strong>
-              </div>
-            </div>
-          </aside>
-        </section>
-
-        <section className="access-steps" aria-label="Como funciona">
-          <div className="access-step">
-            <ShieldCheck size={18} aria-hidden="true" />
-            <span>Clerk autentica</span>
-          </div>
-          <div className="access-step">
-            <Lock size={18} aria-hidden="true" />
-            <span>Account autoriza</span>
-          </div>
-          <div className="access-step">
-            <Grid2X2 size={18} aria-hidden="true" />
-            <span>Cada app obedece</span>
-          </div>
-        </section>
-      </main>
-    </div>
   );
 }
 
@@ -763,7 +536,6 @@ function Landing() {
 
 export function App() {
   const isAdminRoute = window.location.pathname.startsWith("/admin");
-  const isAccessDeniedRoute = window.location.pathname.startsWith("/acesso-negado");
 
   return (
     <>
@@ -778,7 +550,7 @@ export function App() {
       <SignedOut>
         <Landing />
       </SignedOut>
-      <SignedIn>{isAdminRoute ? <AdminPanel /> : isAccessDeniedRoute ? <AccessDeniedPage /> : <Hub />}</SignedIn>
+      <SignedIn>{isAdminRoute ? <AdminPanel /> : <Hub />}</SignedIn>
     </>
   );
 }
