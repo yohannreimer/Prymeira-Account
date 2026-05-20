@@ -753,8 +753,8 @@ img { display: block; max-width: 100%; }
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
+  align-items: flex-start;
+  text-align: left;
   gap: 0;
 }
 .login-brand__logo {
@@ -797,7 +797,7 @@ img { display: block; max-width: 100%; }
 }
 .login-brand__sub {
   font-size: 14px;
-  color: #555;
+  color: rgba(255,255,255,0.45);
   line-height: 1.65;
   max-width: 300px;
 }
@@ -855,9 +855,13 @@ img { display: block; max-width: 100%; }
 .clerk-wrapper > div { width: 100%; }
 .clerk-wrapper .cl-card {
   box-shadow: none !important;
-  border: 1px solid var(--rule) !important;
-  border-radius: var(--radius-lg) !important;
-  padding: 24px !important;
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
+.clerk-wrapper .cl-footer,
+.clerk-wrapper .cl-footerAction {
+  background: transparent !important;
 }
 .clerk-wrapper .cl-formButtonPrimary {
   background: var(--black) !important;
