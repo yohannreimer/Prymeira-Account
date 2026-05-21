@@ -40,7 +40,7 @@ services:
       CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
       ADMIN_EMAILS: ${ADMIN_EMAILS}
       ADMIN_ACTION_TOKEN: ${ADMIN_ACTION_TOKEN}
-      CORS_ORIGINS: https://hub.prymeiradigital.com.br,https://fluvia.prymeiradigital.com.br,https://velio.prymeiradigital.com.br
+      CORS_ORIGINS: https://hub.prymeiradigital.com.br,https://fluvia.prymeiradigital.com.br,https://velio.prymeiradigital.com.br,https://operis.prymeiradigital.com.br,https://flowcut.prymeiradigital.com.br,https://vincula.prymeiradigital.com.br
       PORT: 3001
       NODE_ENV: production
     deploy:
@@ -66,6 +66,7 @@ services:
       VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY}
       CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
       VITE_PRYMEIRA_ACCOUNT_API_URL: /api
+      VITE_PRODUCT_CRM_URL: https://vincula.prymeiradigital.com.br
     deploy:
       mode: replicated
       replicas: 1
