@@ -49,6 +49,13 @@ const products = [
     description: "Monitoramento de e-commerce.",
     appUrl: "https://commerce.prymeiradigital.com.br",
     marketingUrl: "https://prymeiradigital.com.br/commerce"
+  },
+  {
+    productKey: "crm",
+    name: "Vincula",
+    description: "CRM para gestao de relacionamento com clientes.",
+    appUrl: "https://crm.prymeiradigital.com.br",
+    marketingUrl: "https://prymeiradigital.com.br/crm"
   }
 ];
 

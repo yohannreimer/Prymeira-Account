@@ -57,6 +57,12 @@ export const productPresentationByKey: Record<string, ProductPresentation> = {
     accent: "#6d6f2e",
     category: "E-commerce",
     icon: ShoppingBag
+  },
+  crm: {
+    accent: "#4f6f8f",
+    category: "CRM",
+    icon: ChartNoAxesCombined,
+    description: "CRM para gestao de relacionamento com clientes."
   }
 };
 
