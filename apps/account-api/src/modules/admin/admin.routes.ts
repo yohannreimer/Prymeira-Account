@@ -5,9 +5,12 @@ import { ApiError } from "../../lib/errors.js";
 import { assertAdminEmail, parseAdminEmails } from "../auth/admin.js";
 import {
   blockEntitlementSchema,
+  createProductSchema,
   customerParamsSchema,
   listCustomersQuerySchema,
+  productParamsSchema,
   trialEntitlementSchema,
+  updateProductSchema,
   upsertEntitlementSchema
 } from "./admin.schemas.js";
 import {
@@ -15,6 +18,11 @@ import {
   grantTrialEntitlement,
   upsertEntitlement
 } from "../entitlements/entitlements.service.js";
+import {
+  createProduct,
+  listAdminProducts,
+  updateProduct
+} from "../products/products.service.js";
 
 export const adminRoutes: FastifyPluginAsync = async (app) => {
   const env = loadEnv();
@@ -119,6 +127,66 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     });
 
     return { customer: responseCustomer, audit_logs };
+  });
+
+  app.get("/admin/products", async (request) => {
+    await requireAdmin(request.headers.authorization);
+    const products = await listAdminProducts(app.prisma);
+    return { products };
+  });
+
+  app.post("/admin/products", async (request) => {
+    const user = await requireAdmin(request.headers.authorization);
+    requireAdminActionToken(request.headers["x-admin-action-token"]);
+    const input = createProductSchema.parse(request.body);
+
+    const product = await createProduct(app.prisma, {
+      productKey: input.product_key,
+      name: input.name,
+      description: input.description,
+      appUrl: input.app_url,
+      marketingUrl: input.marketing_url,
+      status: input.status
+    });
+
+    await app.prisma.auditLog.create({
+      data: {
+        actorClerkUserId: user.clerkUserId,
+        action: "product_created",
+        targetType: "product",
+        targetId: product.productKey,
+        after: product
+      }
+    });
+
+    return { product };
+  });
+
+  app.patch("/admin/products/:product_key", async (request) => {
+    const user = await requireAdmin(request.headers.authorization);
+    requireAdminActionToken(request.headers["x-admin-action-token"]);
+    const params = productParamsSchema.parse(request.params);
+    const input = updateProductSchema.parse(request.body);
+
+    const product = await updateProduct(app.prisma, params.product_key, {
+      name: input.name,
+      description: input.description,
+      appUrl: input.app_url,
+      marketingUrl: input.marketing_url,
+      status: input.status
+    });
+
+    await app.prisma.auditLog.create({
+      data: {
+        actorClerkUserId: user.clerkUserId,
+        action: "product_updated",
+        targetType: "product",
+        targetId: product.productKey,
+        after: product
+      }
+    });
+
+    return { product };
   });
 
   app.post("/admin/entitlements", async (request) => {

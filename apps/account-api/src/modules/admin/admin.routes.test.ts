@@ -144,6 +144,213 @@ describe("adminRoutes", () => {
     await app.close();
   });
 
+  it("lists products for admin management", async () => {
+    let findManyArgs: unknown;
+    const prisma = {
+      product: {
+        findMany(args: unknown) {
+          findManyArgs = args;
+          return [
+            {
+              id: "product_1",
+              productKey: "crm",
+              name: "Vincula",
+              description: "CRM para relacionamento.",
+              appUrl: "https://crm.prymeiradigital.com.br",
+              marketingUrl: "https://prymeiradigital.com.br/crm",
+              status: "active"
+            }
+          ];
+        }
+      }
+    } as unknown as PrismaClient;
+    const app = await buildApp({ authVerifier, prisma });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/admin/products",
+      headers: { authorization: "Bearer token" }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(findManyArgs).toMatchObject({
+      orderBy: [{ status: "asc" }, { name: "asc" }]
+    });
+    expect(response.json()).toMatchObject({
+      products: [
+        {
+          productKey: "crm",
+          name: "Vincula",
+          description: "CRM para relacionamento.",
+          appUrl: "https://crm.prymeiradigital.com.br",
+          marketingUrl: "https://prymeiradigital.com.br/crm",
+          status: "active"
+        }
+      ]
+    });
+
+    await app.close();
+  });
+
+  it("creates a product with the admin action token", async () => {
+    process.env.ADMIN_ACTION_TOKEN = "confirm-admin";
+    const calls: { create?: unknown; audit?: unknown } = {};
+    const prisma = {
+      product: {
+        findUnique() {
+          return null;
+        },
+        create(args: unknown) {
+          calls.create = args;
+          return {
+            id: "product_123",
+            productKey: "agenda",
+            name: "Agenda Pro",
+            description: "Agenda para operacoes.",
+            appUrl: "https://agenda.prymeiradigital.com.br",
+            marketingUrl: "https://prymeiradigital.com.br/agenda",
+            status: "active"
+          };
+        }
+      },
+      auditLog: {
+        create(args: unknown) {
+          calls.audit = args;
+          return { id: "audit_123" };
+        }
+      }
+    } as unknown as PrismaClient;
+    const app = await buildApp({ authVerifier, prisma });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/admin/products",
+      headers: {
+        authorization: "Bearer token",
+        "x-admin-action-token": "confirm-admin"
+      },
+      payload: {
+        product_key: "agenda",
+        name: "Agenda Pro",
+        description: "Agenda para operacoes.",
+        app_url: "https://agenda.prymeiradigital.com.br",
+        marketing_url: "https://prymeiradigital.com.br/agenda",
+        status: "active"
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(calls.create).toMatchObject({
+      data: {
+        productKey: "agenda",
+        name: "Agenda Pro",
+        description: "Agenda para operacoes.",
+        appUrl: "https://agenda.prymeiradigital.com.br",
+        marketingUrl: "https://prymeiradigital.com.br/agenda",
+        status: "active"
+      }
+    });
+    expect(calls.audit).toMatchObject({
+      data: {
+        actorClerkUserId: "user_admin",
+        action: "product_created",
+        targetType: "product",
+        targetId: "agenda"
+      }
+    });
+    expect(response.json()).toMatchObject({
+      product: {
+        productKey: "agenda",
+        name: "Agenda Pro"
+      }
+    });
+
+    await app.close();
+  });
+
+  it("updates product details without changing the product key", async () => {
+    const calls: { update?: unknown; audit?: unknown } = {};
+    const existingProduct = {
+      id: "product_123",
+      productKey: "crm",
+      name: "Vincula",
+      description: "CRM antigo.",
+      appUrl: "https://crm.prymeiradigital.com.br",
+      marketingUrl: "https://prymeiradigital.com.br/crm",
+      status: "active"
+    };
+    const prisma = {
+      product: {
+        findUnique() {
+          return existingProduct;
+        },
+        update(args: unknown) {
+          calls.update = args;
+          return {
+            ...existingProduct,
+            name: "Vincula CRM",
+            description: "CRM atualizado.",
+            status: "inactive"
+          };
+        }
+      },
+      auditLog: {
+        create(args: unknown) {
+          calls.audit = args;
+          return { id: "audit_123" };
+        }
+      }
+    } as unknown as PrismaClient;
+    const app = await buildApp({ authVerifier, prisma });
+
+    const response = await app.inject({
+      method: "PATCH",
+      url: "/admin/products/crm",
+      headers: { authorization: "Bearer token" },
+      payload: {
+        name: "Vincula CRM",
+        description: "CRM atualizado.",
+        app_url: "https://crm.prymeiradigital.com.br",
+        marketing_url: "https://prymeiradigital.com.br/vincula",
+        status: "inactive"
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(calls.update).toMatchObject({
+      where: { productKey: "crm" },
+      data: {
+        name: "Vincula CRM",
+        description: "CRM atualizado.",
+        appUrl: "https://crm.prymeiradigital.com.br",
+        marketingUrl: "https://prymeiradigital.com.br/vincula",
+        status: "inactive"
+      }
+    });
+    expect(calls.update).not.toMatchObject({
+      data: {
+        productKey: expect.any(String)
+      }
+    });
+    expect(calls.audit).toMatchObject({
+      data: {
+        actorClerkUserId: "user_admin",
+        action: "product_updated",
+        targetType: "product",
+        targetId: "crm"
+      }
+    });
+    expect(response.json()).toMatchObject({
+      product: {
+        productKey: "crm",
+        name: "Vincula CRM",
+        status: "inactive"
+      }
+    });
+
+    await app.close();
+  });
+
   it("requires the admin action token for entitlement mutations when configured", async () => {
     process.env.ADMIN_ACTION_TOKEN = "confirm-admin";
     const { prisma, calls } = createEntitlementRoutePrisma();

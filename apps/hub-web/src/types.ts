@@ -46,6 +46,18 @@ export type AdminSessionResponse = {
   email: string;
 };
 
+export type AdminProduct = {
+  id: string;
+  productKey: string;
+  name: string;
+  description: string | null;
+  appUrl: string;
+  marketingUrl: string | null;
+  status: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export type AdminCustomerListItem = {
   id: string;
   clerkUserId: string;

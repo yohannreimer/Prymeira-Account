@@ -159,7 +159,7 @@ function ProductCard({ product }: { product: AccountProductAccess }) {
         <span className={`pcard__badge ${badgeClass(product)}`}>{statusLabel(product)}</span>
       </div>
       <div className="pcard__cat">{presentation.category}</div>
-      <div className="pcard__name">{formatProductLabel(product.product_key) || product.name}</div>
+      <div className="pcard__name">{product.name || formatProductLabel(product.product_key)}</div>
       <p className="pcard__desc">
         {presentation.description ?? product.description ?? "Produto Prymeira conectado à sua conta central."}
       </p>
@@ -236,7 +236,7 @@ function AccessDeniedPage() {
   const product = data?.products.find((item) => item.product_key === productKey) ?? null;
   const presentation = readProductPresentation(productKey);
   const Icon = presentation.icon;
-  const productName = formatProductLabel(productKey) || product?.name || productKey;
+  const productName = product?.name || formatProductLabel(productKey) || productKey;
   const isAllowed = product?.allowed === true;
   const appUrl = isAllowed ? resolveProductUrl(productKey, product?.app_url ?? returnUrl ?? "#") : null;
   const primaryUrl = isAllowed ? appUrl : checkoutUrl(product, productKey);

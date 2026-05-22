@@ -13,11 +13,14 @@ import {
 } from "lucide-react";
 import {
   blockAdminEntitlement,
+  createAdminProduct,
   fetchAdminCustomer,
   fetchAdminCustomers,
+  fetchAdminProducts,
   fetchAdminSession,
   grantAdminTrial,
   syncCurrentCustomer,
+  updateAdminProduct,
   upsertAdminEntitlement,
 } from "./api";
 import {
@@ -31,7 +34,6 @@ import {
   formatWorkspaceTypeLabel,
   planOptions,
 } from "./labels";
-import { productKeys } from "./products";
 import logomark from "./assets/prymeira-selo.png";
 import logotype from "./assets/prymeira-logo.png";
 import type {
@@ -39,6 +41,7 @@ import type {
   AdminCustomerDetail,
   AdminCustomerListItem,
   AdminEntitlement,
+  AdminProduct,
   AdminWorkspace,
 } from "./types";
 
@@ -48,7 +51,17 @@ type Notice = {
 };
 
 const statusOptions = ["active", "trial", "internal", "blocked", "expired", "cancelled"];
+const productStatusOptions = ["active", "inactive", "archived"];
 const sourceOptions = ["admin", "manual", "internal", "trial", "payment", "migration"];
+
+const emptyProductForm = {
+  productKey: "",
+  name: "",
+  description: "",
+  appUrl: "",
+  marketingUrl: "",
+  status: "active",
+};
 
 function formatDate(value: string | null | undefined) {
   if (!value) return "—";
@@ -91,7 +104,10 @@ export function AdminPanel() {
   const [auditLogs, setAuditLogs] = useState<AdminAuditLog[]>([]);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [actionToken, setActionToken] = useState("");
-  const [productKey, setProductKey] = useState(productKeys[0] ?? "operis");
+  const [products, setProducts] = useState<AdminProduct[]>([]);
+  const [productKey, setProductKey] = useState("operis");
+  const [editingProductKey, setEditingProductKey] = useState("");
+  const [productForm, setProductForm] = useState(emptyProductForm);
   const [status, setStatus] = useState("active");
   const [source, setSource] = useState("admin");
   const [plan, setPlan] = useState("internal");
@@ -114,6 +130,23 @@ export function AdminPanel() {
       setCustomers(response.customers);
       if (!selectedCustomerId && response.customers[0]) {
         setSelectedCustomerId(response.customers[0].id);
+      }
+    } catch (error) {
+      setNotice({ tone: "error", message: error instanceof Error ? error.message : String(error) });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function loadProducts() {
+    setIsLoading(true);
+    setNotice(null);
+    try {
+      const response = await withToken(fetchAdminProducts);
+      setProducts(response.products);
+      const firstActiveProduct = response.products.find((product) => product.status === "active") ?? response.products[0];
+      if (firstActiveProduct && !response.products.some((product) => product.productKey === productKey)) {
+        setProductKey(firstActiveProduct.productKey);
       }
     } catch (error) {
       setNotice({ tone: "error", message: error instanceof Error ? error.message : String(error) });
@@ -160,7 +193,7 @@ export function AdminPanel() {
       .then(() => {
         if (!active) return;
         setIsAdmin(true);
-        return syncLoggedAdmin().then(() => loadCustomers(""));
+        return syncLoggedAdmin().then(() => Promise.all([loadCustomers(""), loadProducts()]));
       })
       .catch(() => {
         if (!active) return;
@@ -188,12 +221,75 @@ export function AdminPanel() {
     () => selectedWorkspace(customer, selectedWorkspaceId),
     [customer, selectedWorkspaceId],
   );
+  const productNameByKey = useMemo(
+    () => new Map(products.map((product) => [product.productKey, product.name])),
+    [products],
+  );
   const displayName =
     user?.fullName ?? user?.primaryEmailAddress?.emailAddress ?? "Admin";
+
+  function productLabel(nextProductKey: string) {
+    return productNameByKey.get(nextProductKey) ?? formatProductLabel(nextProductKey);
+  }
 
   async function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await loadCustomers(search);
+  }
+
+  function startNewProduct() {
+    setEditingProductKey("");
+    setProductForm(emptyProductForm);
+  }
+
+  function editProduct(product: AdminProduct) {
+    setEditingProductKey(product.productKey);
+    setProductForm({
+      productKey: product.productKey,
+      name: product.name,
+      description: product.description ?? "",
+      appUrl: product.appUrl,
+      marketingUrl: product.marketingUrl ?? "",
+      status: product.status,
+    });
+  }
+
+  async function submitProduct(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const productPayload = {
+      name: productForm.name.trim(),
+      description: productForm.description.trim() || null,
+      app_url: productForm.appUrl.trim(),
+      marketing_url: productForm.marketingUrl.trim() || null,
+      status: productForm.status,
+    };
+
+    setIsLoading(true);
+    setNotice(null);
+    try {
+      if (editingProductKey) {
+        const updated = await withToken((token) =>
+          updateAdminProduct(token, actionToken, editingProductKey, productPayload),
+        );
+        editProduct(updated.product);
+        setNotice({ tone: "success", message: "Produto atualizado." });
+      } else {
+        const created = await withToken((token) =>
+          createAdminProduct(token, actionToken, {
+            product_key: productForm.productKey.trim(),
+            ...productPayload,
+          }),
+        );
+        setProductKey(created.product.productKey);
+        editProduct(created.product);
+        setNotice({ tone: "success", message: "Produto criado." });
+      }
+      await loadProducts();
+    } catch (error) {
+      setNotice({ tone: "error", message: error instanceof Error ? error.message : String(error) });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   async function submitEntitlement(event: FormEvent<HTMLFormElement>) {
@@ -261,7 +357,7 @@ export function AdminPanel() {
       );
       setNotice({
         tone: "success",
-        message: `${formatProductLabel(entitlement.productKey)} bloqueado.`
+        message: `${productLabel(entitlement.productKey)} bloqueado.`
       });
       if (selectedCustomerId) await loadCustomer(selectedCustomerId);
     } catch (error) {
@@ -504,7 +600,7 @@ export function AdminPanel() {
                               <div className="admin-ent-icon">
                                 <KeyRound size={13} aria-hidden="true" />
                               </div>
-                              <span className="admin-ent-name">{formatProductLabel(ent.productKey)}</span>
+                              <span className="admin-ent-name">{productLabel(ent.productKey)}</span>
                             </div>
                           </td>
                           <td>
@@ -633,6 +729,111 @@ export function AdminPanel() {
             />
           </div>
 
+          {/* Product form */}
+          <form
+            onSubmit={submitProduct}
+            style={{ display: "flex", flexDirection: "column", gap: 8 }}
+          >
+            <div className="admin-action-group-lbl">Produtos</div>
+            <div className="admin-field">
+              <label htmlFor="admin-edit-product">Editar produto</label>
+              <select
+                id="admin-edit-product"
+                value={editingProductKey}
+                onChange={(e) => {
+                  const nextProduct = products.find((product) => product.productKey === e.target.value);
+                  if (nextProduct) editProduct(nextProduct);
+                  else startNewProduct();
+                }}
+              >
+                <option value="">Novo produto</option>
+                {products.map((product) => (
+                  <option key={product.productKey} value={product.productKey}>
+                    {product.name} ({product.productKey})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="admin-field">
+              <label htmlFor="admin-product-key">Chave</label>
+              <input
+                id="admin-product-key"
+                type="text"
+                value={productForm.productKey}
+                onChange={(e) =>
+                  setProductForm((current) => ({ ...current, productKey: e.target.value.toLowerCase() }))
+                }
+                placeholder="exemplo: crm"
+                pattern="[a-z0-9][a-z0-9_-]*"
+                disabled={Boolean(editingProductKey)}
+                required
+              />
+            </div>
+            <div className="admin-field">
+              <label htmlFor="admin-product-name">Nome público</label>
+              <input
+                id="admin-product-name"
+                type="text"
+                value={productForm.name}
+                onChange={(e) => setProductForm((current) => ({ ...current, name: e.target.value }))}
+                placeholder="Vincula"
+                required
+              />
+            </div>
+            <div className="admin-field">
+              <label htmlFor="admin-product-description">Descrição</label>
+              <textarea
+                id="admin-product-description"
+                value={productForm.description}
+                onChange={(e) =>
+                  setProductForm((current) => ({ ...current, description: e.target.value }))
+                }
+                rows={3}
+              />
+            </div>
+            <div className="admin-field">
+              <label htmlFor="admin-product-app-url">URL do app</label>
+              <input
+                id="admin-product-app-url"
+                type="url"
+                value={productForm.appUrl}
+                onChange={(e) => setProductForm((current) => ({ ...current, appUrl: e.target.value }))}
+                placeholder="https://app.prymeiradigital.com.br"
+                required
+              />
+            </div>
+            <div className="admin-field">
+              <label htmlFor="admin-product-marketing-url">URL comercial</label>
+              <input
+                id="admin-product-marketing-url"
+                type="url"
+                value={productForm.marketingUrl}
+                onChange={(e) =>
+                  setProductForm((current) => ({ ...current, marketingUrl: e.target.value }))
+                }
+                placeholder="https://prymeiradigital.com.br/produto"
+              />
+            </div>
+            <div className="admin-field">
+              <label htmlFor="admin-product-status">Status do produto</label>
+              <select
+                id="admin-product-status"
+                value={productForm.status}
+                onChange={(e) => setProductForm((current) => ({ ...current, status: e.target.value }))}
+              >
+                {productStatusOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {formatStatusLabel(option)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button className="admin-action-btn admin-action-btn--black" type="submit" disabled={isLoading}>
+              <RefreshCw size={13} aria-hidden="true" />
+              {editingProductKey ? "Atualizar produto" : "Criar produto"}
+            </button>
+          </form>
+
           {/* Entitlement form */}
           <form
             onSubmit={submitEntitlement}
@@ -646,9 +847,12 @@ export function AdminPanel() {
                 value={productKey}
                 onChange={(e) => setProductKey(e.target.value)}
               >
-                {productKeys.map((k) => (
-                  <option key={k} value={k}>
-                    {formatProductLabel(k)}
+                {products.length === 0 && (
+                  <option value={productKey}>Carregando produtos</option>
+                )}
+                {products.map((product) => (
+                  <option key={product.productKey} value={product.productKey}>
+                    {product.name} ({product.productKey})
                   </option>
                 ))}
               </select>
@@ -709,7 +913,7 @@ export function AdminPanel() {
             <button
               className="admin-action-btn admin-action-btn--gold"
               type="submit"
-              disabled={isLoading || !workspace}
+              disabled={isLoading || !workspace || products.length === 0}
             >
               <KeyRound size={13} aria-hidden="true" />
               Salvar permissão

@@ -1257,7 +1257,10 @@ img { display: block; max-width: 100%; }
 .admin-field label { font-size: 11px; font-weight: 600; color: var(--dim); }
 .admin-field select,
 .admin-field input[type="text"],
-.admin-field input[type="number"] {
+.admin-field input[type="password"],
+.admin-field input[type="url"],
+.admin-field input[type="number"],
+.admin-field textarea {
   padding: 7px 10px;
   border: 1px solid var(--rule);
   border-radius: var(--radius-sm);
@@ -1268,7 +1271,13 @@ img { display: block; max-width: 100%; }
   outline: none;
 }
 .admin-field select:focus,
-.admin-field input:focus { border-color: var(--gold); }
+.admin-field input:focus,
+.admin-field textarea:focus { border-color: var(--gold); }
+.admin-field textarea { min-height: 72px; resize: vertical; line-height: 1.4; }
+.admin-field input:disabled {
+  color: var(--muted);
+  background: var(--surface);
+}
 
 .admin-info-note {
   font-size: 11px;

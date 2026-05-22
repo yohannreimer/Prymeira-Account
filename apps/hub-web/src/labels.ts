@@ -5,6 +5,8 @@ const statusLabels: Record<string, string> = {
   blocked: "Bloqueado",
   expired: "Expirado",
   cancelled: "Cancelado",
+  inactive: "Inativo",
+  archived: "Arquivado",
   locked: "Bloqueado"
 };
 
@@ -48,6 +50,7 @@ const productLabels: Record<string, string> = {
   orquestrador: "Velio",
   financeiro: "Fluvia",
   media: "Flowcut",
+  crm: "Vincula",
   ads: "Ads Vision",
   commerce: "Commerce Intel"
 };
@@ -55,13 +58,16 @@ const productLabels: Record<string, string> = {
 const auditActionLabels: Record<string, string> = {
   entitlement_upserted: "Permissão atualizada",
   entitlement_blocked: "Produto bloqueado",
-  trial_granted: "Teste concedido"
+  trial_granted: "Teste concedido",
+  product_created: "Produto criado",
+  product_updated: "Produto atualizado"
 };
 
 const targetTypeLabels: Record<string, string> = {
   customer: "Cliente",
   workspace: "Área de trabalho",
   entitlement: "Permissão",
+  product: "Produto",
   subscription: "Assinatura"
 };
 

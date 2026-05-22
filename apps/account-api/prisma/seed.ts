@@ -61,20 +61,17 @@ const products = [
 
 async function main() {
   for (const product of products) {
-    await prisma.product.upsert({
-      where: { productKey: product.productKey },
-      update: {
-        name: product.name,
-        description: product.description,
-        appUrl: product.appUrl,
-        marketingUrl: product.marketingUrl,
-        status: "active"
-      },
-      create: {
-        ...product,
-        status: "active"
-      }
+    const existing = await prisma.product.findUnique({
+      where: { productKey: product.productKey }
     });
+    if (!existing) {
+      await prisma.product.create({
+        data: {
+          ...product,
+          status: "active"
+        }
+      });
+    }
   }
 }
 

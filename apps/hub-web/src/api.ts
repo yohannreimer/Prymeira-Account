@@ -3,6 +3,7 @@ import type {
   AdminCustomerDetailResponse,
   AdminCustomerListItem,
   AdminEntitlement,
+  AdminProduct,
   AdminSessionResponse,
   SyncCustomerResponse
 } from "./types";
@@ -84,6 +85,10 @@ export function fetchAdminCustomer(token: string, customerId: string) {
   return adminFetch<AdminCustomerDetailResponse>(token, `/admin/customers/${customerId}`);
 }
 
+export function fetchAdminProducts(token: string) {
+  return adminFetch<{ products: AdminProduct[] }>(token, "/admin/products");
+}
+
 function actionHeaders(actionToken: string): Record<string, string> {
   return actionToken.trim() ? { "x-admin-action-token": actionToken.trim() } : {};
 }
@@ -134,6 +139,48 @@ export function grantAdminTrial(
     headers: actionHeaders(actionToken),
     body: JSON.stringify(payload)
   });
+}
+
+export function createAdminProduct(
+  token: string,
+  actionToken: string,
+  payload: {
+    product_key: string;
+    name: string;
+    description?: string | null;
+    app_url: string;
+    marketing_url?: string | null;
+    status: string;
+  }
+) {
+  return adminFetch<{ product: AdminProduct }>(token, "/admin/products", {
+    method: "POST",
+    headers: actionHeaders(actionToken),
+    body: JSON.stringify(payload)
+  });
+}
+
+export function updateAdminProduct(
+  token: string,
+  actionToken: string,
+  productKey: string,
+  payload: {
+    name: string;
+    description?: string | null;
+    app_url: string;
+    marketing_url?: string | null;
+    status: string;
+  }
+) {
+  return adminFetch<{ product: AdminProduct }>(
+    token,
+    `/admin/products/${encodeURIComponent(productKey)}`,
+    {
+      method: "PATCH",
+      headers: actionHeaders(actionToken),
+      body: JSON.stringify(payload)
+    }
+  );
 }
 
 export function resolveProductUrl(productKey: string, fallbackUrl: string | null | undefined) {
