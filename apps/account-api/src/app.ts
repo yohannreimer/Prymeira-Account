@@ -10,6 +10,7 @@ import { createClerkAuthVerifier } from "./modules/auth/clerk.js";
 import type { AuthVerifier } from "./modules/auth/types.js";
 import { customersRoutes } from "./modules/customers/customers.routes.js";
 import { prismaPlugin } from "./plugins/prisma.js";
+import { teamRoutes } from "./modules/team/team.routes.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -84,6 +85,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
   await app.register(customersRoutes);
   await app.register(accessRoutes);
   await app.register(adminRoutes);
+  await app.register(teamRoutes);
 
   return app;
 }

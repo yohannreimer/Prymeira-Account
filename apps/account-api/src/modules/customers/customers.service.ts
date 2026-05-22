@@ -4,6 +4,7 @@ import type { AuthenticatedUser } from "../auth/types.js";
 import { ensureDefaultWorkspaceForCustomer } from "../workspaces/workspaces.service.js";
 import type { z } from "zod";
 import type { syncCustomerSchema } from "./customers.schemas.js";
+import { acceptPendingInvitationsForCustomer } from "../team/team.service.js";
 
 type SyncCustomerInput = z.infer<typeof syncCustomerSchema>;
 
@@ -35,6 +36,7 @@ export async function syncCustomer(
       name: nextName ?? null
     }
   });
+  await acceptPendingInvitationsForCustomer(prisma, customer);
   const workspaceContext = await ensureDefaultWorkspaceForCustomer(prisma, customer);
 
   return { customer, workspaceContext };

@@ -23,7 +23,7 @@ export const accessRoutes: FastifyPluginAsync = async (app) => {
     const customer = await findCustomerByClerkUserId(app.prisma, user.clerkUserId);
     const product = await findProductByKey(app.prisma, query.product_key);
     const workspaceContext = customer
-      ? await findAccessWorkspaceMembership(app.prisma, customer.id)
+      ? await findAccessWorkspaceMembership(app.prisma, customer.id, query.product_key)
       : { membership: null, missingReason: "no_workspace" as const };
     const activeWorkspaceId =
       workspaceContext.membership?.status === "active" && workspaceContext.membership.workspace.status === "active"
@@ -155,9 +155,38 @@ type WorkspaceLookupResult = {
 };
 
 async function findAccessWorkspaceMembership(
-  prisma: Pick<PrismaClient, "workspaceMember">,
-  customerId: string
+  prisma: Pick<PrismaClient, "workspaceMember"> & Partial<Pick<PrismaClient, "workspaceProductMember">>,
+  customerId: string,
+  productKey?: string
 ): Promise<WorkspaceLookupResult> {
+  if (productKey && prisma.workspaceProductMember?.findFirst) {
+    const productSeat = await prisma.workspaceProductMember.findFirst({
+      where: {
+        customerId,
+        productKey,
+        status: "active",
+        workspace: { status: "active" }
+      },
+      orderBy: { createdAt: "asc" }
+    });
+
+    if (productSeat) {
+      const productMembership = await prisma.workspaceMember.findUnique({
+        where: {
+          workspaceId_customerId: {
+            workspaceId: productSeat.workspaceId,
+            customerId
+          }
+        },
+        include: { workspace: true }
+      });
+
+      if (productMembership?.status === "active") {
+        return { membership: productMembership, missingReason: "no_workspace" };
+      }
+    }
+  }
+
   const activeMembership = await prisma.workspaceMember.findFirst({
     where: {
       customerId,
