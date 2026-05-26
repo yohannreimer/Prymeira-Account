@@ -42,31 +42,39 @@ export async function handleStripeEvent(
   const workspaceId = membership.workspaceId;
 
   let currentPeriodEndsAt: Date | null = null;
-  if (session.subscription) {
+  const subscriptionId =
+    typeof session.subscription === "string" ? session.subscription : (session.subscription?.id ?? null);
+
+  if (subscriptionId) {
     try {
-      const sub = await stripe.subscriptions.retrieve(session.subscription as string);
-      currentPeriodEndsAt = new Date(sub.current_period_end * 1000);
+      const sub = await stripe.subscriptions.retrieve(subscriptionId);
+      const periodEnd = sub.items.data[0]?.current_period_end;
+      if (periodEnd !== undefined) {
+        currentPeriodEndsAt = new Date(periodEnd * 1000);
+      }
     } catch {
       // non-fatal: entitlement is still granted without expiry
     }
   }
 
-  for (const productKey of productKeys) {
-    await upsertEntitlement(prisma, { clerkUserId }, {
-      workspaceId,
-      productKey,
-      status: "active",
-      plan: planId,
-      source: "stripe",
-      currentPeriodEndsAt,
-      endsAt: null,
-      trialEndsAt: null,
-      limits: {},
-      metadata: {
-        stripe_session_id: session.id,
-        stripe_subscription_id: session.subscription ?? null
-      },
-      auditAction: "entitlement.stripe_checkout"
-    });
-  }
+  await Promise.all(
+    productKeys.map((productKey) =>
+      upsertEntitlement(prisma, { clerkUserId }, {
+        workspaceId,
+        productKey,
+        status: "active",
+        plan: planId,
+        source: "stripe",
+        currentPeriodEndsAt,
+        endsAt: null,
+        trialEndsAt: null,
+        limits: {},
+        metadata: {
+          stripe_session_id: session.id,
+          stripe_subscription_id: subscriptionId
+        },
+        auditAction: "entitlement.stripe_checkout"
+      })
+    )
+  );
 }
