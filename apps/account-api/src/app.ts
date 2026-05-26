@@ -8,9 +8,11 @@ import { accessRoutes } from "./modules/access/access.routes.js";
 import { adminRoutes } from "./modules/admin/admin.routes.js";
 import { createClerkAuthVerifier } from "./modules/auth/clerk.js";
 import type { AuthVerifier } from "./modules/auth/types.js";
+import { checkoutRoutes } from "./modules/checkout/checkout.routes.js";
 import { customersRoutes } from "./modules/customers/customers.routes.js";
 import { prismaPlugin } from "./plugins/prisma.js";
 import { teamRoutes } from "./modules/team/team.routes.js";
+import { webhookRoutes } from "./modules/webhook/webhook.routes.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -86,6 +88,8 @@ export async function buildApp(options: BuildAppOptions = {}) {
   await app.register(accessRoutes);
   await app.register(adminRoutes);
   await app.register(teamRoutes);
+  await app.register(checkoutRoutes);
+  await app.register(webhookRoutes);
 
   return app;
 }
