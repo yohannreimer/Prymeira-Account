@@ -186,3 +186,28 @@ export function updateAdminProduct(
 export function resolveProductUrl(productKey: string, fallbackUrl: string | null | undefined) {
   return resolveConfiguredProductUrl(productKey, fallbackUrl);
 }
+
+export async function createCheckoutSession(
+  token: string,
+  payload: {
+    plan_id: string;
+    billing: "monthly" | "annual";
+    success_url: string;
+    cancel_url: string;
+  }
+): Promise<{ checkout_url: string }> {
+  const response = await fetch(`${accountApiUrl}/checkout`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error(await readApiError(response, "Não foi possível iniciar o checkout."));
+  }
+
+  return response.json() as Promise<{ checkout_url: string }>;
+}
