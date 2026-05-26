@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@clerk/clerk-react";
-import { ArrowLeft, CheckCircle, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  Building2,
+  CheckCircle,
+  Layers,
+  MessageCircle,
+  Settings2,
+  Sparkles,
+  type LucideIcon,
+} from "lucide-react";
 import { createCheckoutSession } from "./api";
 import { readProductPresentation } from "./products";
 import logomark from "./assets/prymeira-selo.png";
@@ -16,6 +25,8 @@ type Plan = {
   priceAnnual: number;
   productKeys: string[];
   recommended?: boolean;
+  icon: LucideIcon;
+  accent: string;
 };
 
 type SoloPlan = {
@@ -35,7 +46,9 @@ const PLANS: Plan[] = [
     name: "Start",
     priceMonthly: 97,
     priceAnnual: 797,
-    productKeys: ["talk", "crm"]
+    productKeys: ["talk", "crm"],
+    icon: MessageCircle,
+    accent: "#2a5f4a"
   },
   {
     id: "empresa",
@@ -43,21 +56,27 @@ const PLANS: Plan[] = [
     priceMonthly: 147,
     priceAnnual: 1197,
     productKeys: ["talk", "crm", "financeiro"],
-    recommended: true
+    recommended: true,
+    icon: Building2,
+    accent: "#3757a6"
   },
   {
     id: "empresa-pro",
     name: "Empresa Pro",
     priceMonthly: 197,
     priceAnnual: 1597,
-    productKeys: ["talk", "crm", "financeiro", "orquestrador"]
+    productKeys: ["talk", "crm", "financeiro", "orquestrador"],
+    icon: Settings2,
+    accent: "#1c8b61"
   },
   {
     id: "suite",
     name: "Suite Completa",
     priceMonthly: 247,
     priceAnnual: 1997,
-    productKeys: ["talk", "crm", "financeiro", "orquestrador", "media", "operis"]
+    productKeys: ["talk", "crm", "financeiro", "orquestrador", "media", "operis"],
+    icon: Layers,
+    accent: "#8a3f54"
   }
 ];
 
@@ -106,14 +125,20 @@ export function PlansPage() {
   const [billing, setBilling] = useState<Billing>("monthly");
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { productKey: ctxProductKey, success } = readPlansQuery();
+  const [{ productKey: ctxProductKey, success }] = useState(readPlansQuery);
   const highlightedRef = useRef<HTMLDivElement | null>(null);
 
+  const scrollTargetId = ctxProductKey
+    ? (SOLOS.find((s) => s.productKey === ctxProductKey)?.id
+      ?? PLANS.find((p) => p.productKeys.includes(ctxProductKey))?.id
+      ?? null)
+    : null;
+
   useEffect(() => {
-    if (ctxProductKey && highlightedRef.current) {
+    if (scrollTargetId && highlightedRef.current) {
       highlightedRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-  }, [ctxProductKey]);
+  }, [scrollTargetId]);
 
   async function handleSubscribe(planId: string) {
     if (!isSignedIn) {
@@ -152,7 +177,7 @@ export function PlansPage() {
   const ctxProductName = ctxProductKey ? (PRODUCT_NAMES[ctxProductKey] ?? ctxProductKey) : null;
 
   return (
-    <div style={{ background: "var(--bg)", minHeight: "100vh" }}>
+    <div style={{ background: "var(--cream)", minHeight: "100vh" }}>
       {/* Topbar */}
       <header className="topbar" style={{ position: "sticky", top: 0, zIndex: 100 }}>
         <a href="/" className="plans-topbar-back">
@@ -215,7 +240,6 @@ export function PlansPage() {
         <div className="plans-grid" role="list">
           {PLANS.map((plan) => {
             const isHighlighted = ctxProductKey !== null && plan.productKeys.includes(ctxProductKey);
-            const pres = readProductPresentation(plan.productKeys[0]);
             const isLoading = loadingId === plan.id;
             const ctaClass = plan.recommended
               ? "pkg__cta pkg__cta--gold"
@@ -223,7 +247,7 @@ export function PlansPage() {
               ? "pkg__cta pkg__cta--primary"
               : "pkg__cta pkg__cta--ghost";
 
-            const refProp = isHighlighted ? { ref: highlightedRef } : {};
+            const refProp = plan.id === scrollTargetId ? { ref: highlightedRef } : {};
 
             return (
               <div
@@ -245,10 +269,10 @@ export function PlansPage() {
                 {/* Icon */}
                 <div
                   className="pkg__icon"
-                  style={{ background: `${pres.accent}22` }}
+                  style={{ background: `${plan.accent}22` }}
                   aria-hidden="true"
                 >
-                  <pres.icon size={20} color={pres.accent} />
+                  <plan.icon size={20} color={plan.accent} />
                 </div>
 
                 {/* Name */}
@@ -316,7 +340,7 @@ export function PlansPage() {
             const isHighlighted = ctxProductKey === solo.productKey;
             const pres = readProductPresentation(solo.productKey);
             const isLoading = loadingId === solo.id;
-            const refProp = isHighlighted ? { ref: highlightedRef } : {};
+            const refProp = solo.id === scrollTargetId ? { ref: highlightedRef } : {};
 
             return (
               <div
