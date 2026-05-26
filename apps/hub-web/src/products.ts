@@ -6,6 +6,7 @@ import {
   Compass,
   LucideIcon,
   Megaphone,
+  MessageCircle,
   Settings2,
   ShoppingBag
 } from "lucide-react";
@@ -47,6 +48,12 @@ export const productPresentationByKey: Record<string, ProductPresentation> = {
     category: "Vídeo e mídia",
     icon: Clapperboard,
     description: "Transforme vídeos longos em cortes prontos para publicar. O Flowcut organiza upload, corte com IA, transcrição, pacote para YouTube e publicação em um fluxo único para acelerar produção de conteúdo."
+  },
+  talk: {
+    accent: "#2a5f4a",
+    category: "Comunicação",
+    icon: MessageCircle,
+    description: "Central de comunicação via WhatsApp. Atenda clientes, gerencie conversas e automatize respostas — tudo integrado ao CRM."
   },
   ads: {
     accent: "#8a3f54",
