@@ -27,6 +27,7 @@ import {
   syncCurrentCustomer,
 } from "./api";
 import { AdminPanel } from "./AdminPanel";
+import { PlansPage } from "./PlansPage";
 import { formatPlanLabel, formatProductLabel, formatRoleLabel, formatWorkspaceTypeLabel } from "./labels";
 import { readProductPresentation } from "./products";
 import type { AccountProductAccess, AccountProductsResponse } from "./types";
@@ -750,6 +751,7 @@ function Landing() {
 export function App() {
   const isAdminRoute = window.location.pathname.startsWith("/admin");
   const isAccessDeniedRoute = window.location.pathname.startsWith("/acesso-negado");
+  const isPlansRoute = window.location.pathname.startsWith("/planos");
 
   return (
     <>
@@ -762,9 +764,14 @@ export function App() {
         </div>
       </ClerkLoading>
       <SignedOut>
-        <Landing />
+        {isPlansRoute ? <PlansPage /> : <Landing />}
       </SignedOut>
-      <SignedIn>{isAdminRoute ? <AdminPanel /> : isAccessDeniedRoute ? <AccessDeniedPage /> : <Hub />}</SignedIn>
+      <SignedIn>
+        {isAdminRoute ? <AdminPanel /> :
+         isAccessDeniedRoute ? <AccessDeniedPage /> :
+         isPlansRoute ? <PlansPage /> :
+         <Hub />}
+      </SignedIn>
     </>
   );
 }
