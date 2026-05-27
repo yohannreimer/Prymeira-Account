@@ -61,6 +61,29 @@ describe("checkoutRoutes", () => {
     await app.close();
   });
 
+  it("returns 503 when Stripe is not configured", async () => {
+    process.env.STRIPE_SECRET_KEY = "";
+    const app = await buildApp({ authVerifier, prisma });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/checkout",
+      headers: { authorization: "Bearer token" },
+      payload: {
+        plan_id: "start",
+        billing: "monthly",
+        success_url: "https://hub.prymeira.com/planos?success=1",
+        cancel_url: "https://hub.prymeira.com/planos"
+      }
+    });
+
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toEqual({
+      error: { code: "INTERNAL_ERROR", message: "Checkout is not configured." }
+    });
+    await app.close();
+  });
+
   it("returns checkout_url when service succeeds", async () => {
     vi.mocked(checkoutService.createCheckoutSession).mockResolvedValue({
       checkoutUrl: "https://checkout.stripe.com/pay/cs_test_abc"

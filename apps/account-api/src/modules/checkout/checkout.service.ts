@@ -2,6 +2,8 @@ import Stripe from "stripe";
 import type { Env } from "../../env.js";
 import { ApiError } from "../../lib/errors.js";
 
+const TRIAL_PERIOD_DAYS = 14;
+
 type CreateCheckoutSessionInput = {
   planId: string;
   billing: "monthly" | "annual";
@@ -41,9 +43,18 @@ export async function createCheckoutSession(
 
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
+    payment_method_collection: "always",
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: input.successUrl,
     cancel_url: input.cancelUrl,
+    subscription_data: {
+      trial_period_days: TRIAL_PERIOD_DAYS,
+      metadata: {
+        clerk_user_id: input.clerkUserId,
+        plan_id: input.planId,
+        billing: input.billing
+      }
+    },
     metadata: {
       clerk_user_id: input.clerkUserId,
       plan_id: input.planId,

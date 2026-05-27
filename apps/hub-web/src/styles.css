@@ -1353,6 +1353,7 @@ img { display: block; max-width: 100%; }
 .solo__right { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; flex-shrink: 0; }
 .solo .solo__price { font-family: var(--serif); font-size: 24px; font-weight: 800; color: #171717; opacity: 1; line-height: 1; }
 .solo .solo__price em { font-size: 13px; font-style: normal; color: #525252; opacity: 1; }
+.solo__trial { margin-top: 4px; font-size: 11px; font-weight: 700; color: #15803d; text-align: right; }
 .solo__price-annual { font-size: 11px; color: #4ade80; }
 .solo__cta { padding: 9px 18px; border-radius: 8px; font-size: 12px; font-weight: 700; border: 1px solid var(--rule); background: transparent; color: var(--text); cursor: pointer; transition: opacity .15s; white-space: nowrap; }
 .solo__cta:disabled { opacity: .5; cursor: default; }

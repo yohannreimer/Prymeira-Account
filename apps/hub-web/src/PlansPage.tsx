@@ -14,6 +14,8 @@ import { createCheckoutSession, fetchPlans, type PlansResponse } from "./api";
 import { readProductPresentation } from "./products";
 import logomark from "./assets/prymeira-selo.png";
 
+const TRIAL_DAYS = 14;
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type Billing = "monthly" | "annual";
@@ -313,8 +315,8 @@ export function PlansPage() {
                       </p>
                       <p className="pkg__price-period">
                         {billing === "monthly"
-                          ? "/mês · cobrado mensalmente"
-                          : `/mês · cobrado R$ ${annualTotal}/ano`}
+                          ? `${TRIAL_DAYS} dias grátis · depois /mês`
+                          : `${TRIAL_DAYS} dias grátis · depois R$ ${annualTotal}/ano`}
                       </p>
                     </>
                   );
@@ -348,7 +350,7 @@ export function PlansPage() {
                   disabled={isLoading || loadingId !== null}
                   aria-busy={isLoading}
                 >
-                  {isLoading ? "Aguarde..." : `Assinar ${plan.name}`}
+                  {isLoading ? "Aguarde..." : `Começar teste ${plan.name}`}
                 </button>
                 {errors[plan.id] && (
                   <p className="pkg__err" role="alert">{errors[plan.id]}</p>
@@ -403,6 +405,7 @@ export function PlansPage() {
                           <p className="solo__price">
                             R$ {display}<em>/mês</em>
                           </p>
+                          <p className="solo__trial">{TRIAL_DAYS} dias grátis</p>
                           {billing === "annual" && (
                             <p className="solo__price-annual">R$ {annualTotal}/ano</p>
                           )}
@@ -416,7 +419,7 @@ export function PlansPage() {
                     disabled={isLoading || loadingId !== null}
                     aria-busy={isLoading}
                   >
-                    {isLoading ? "Aguarde..." : "Assinar"}
+                    {isLoading ? "Aguarde..." : "Começar teste"}
                   </button>
                   {errors[solo.id] && (
                     <p className="solo__err" role="alert">{errors[solo.id]}</p>

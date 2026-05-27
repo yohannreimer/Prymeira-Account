@@ -43,6 +43,20 @@ services:
       CORS_ORIGINS: https://hub.prymeiradigital.com.br,https://fluvia.prymeiradigital.com.br,https://velio.prymeiradigital.com.br,https://operis.prymeiradigital.com.br,https://flowcut.prymeiradigital.com.br,https://vincula.prymeiradigital.com.br,https://talk.prymeiradigital.com.br
       PORT: 3001
       NODE_ENV: production
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      STRIPE_PRICE_START_MONTHLY: ${STRIPE_PRICE_START_MONTHLY}
+      STRIPE_PRICE_START_ANNUAL: ${STRIPE_PRICE_START_ANNUAL}
+      STRIPE_PRICE_EMPRESA_MONTHLY: ${STRIPE_PRICE_EMPRESA_MONTHLY}
+      STRIPE_PRICE_EMPRESA_ANNUAL: ${STRIPE_PRICE_EMPRESA_ANNUAL}
+      STRIPE_PRICE_EMPRESA_PRO_MONTHLY: ${STRIPE_PRICE_EMPRESA_PRO_MONTHLY}
+      STRIPE_PRICE_EMPRESA_PRO_ANNUAL: ${STRIPE_PRICE_EMPRESA_PRO_ANNUAL}
+      STRIPE_PRICE_SUITE_MONTHLY: ${STRIPE_PRICE_SUITE_MONTHLY}
+      STRIPE_PRICE_SUITE_ANNUAL: ${STRIPE_PRICE_SUITE_ANNUAL}
+      STRIPE_PRICE_OPERIS_MONTHLY: ${STRIPE_PRICE_OPERIS_MONTHLY}
+      STRIPE_PRICE_OPERIS_ANNUAL: ${STRIPE_PRICE_OPERIS_ANNUAL}
+      STRIPE_PRICE_MEDIA_MONTHLY: ${STRIPE_PRICE_MEDIA_MONTHLY}
+      STRIPE_PRICE_MEDIA_ANNUAL: ${STRIPE_PRICE_MEDIA_ANNUAL}
     deploy:
       mode: replicated
       replicas: 1
@@ -85,13 +99,20 @@ services:
         - traefik.docker.network=network_swarm_public
         - traefik.http.routers.prymeira-hub.rule=Host(`hub.prymeiradigital.com.br`)
         - traefik.http.routers.prymeira-hub.entrypoints=websecure
+        - traefik.http.routers.prymeira-hub.tls=true
         - traefik.http.routers.prymeira-hub.tls.certresolver=letsencryptresolver
         - traefik.http.routers.prymeira-hub.service=prymeira-hub
         - traefik.http.services.prymeira-hub.loadbalancer.server.port=80
-        - traefik.http.routers.prymeira-root.rule=Host(`prymeiradigital.com.br`) || Host(`www.prymeiradigital.com.br`)
+        - traefik.http.routers.prymeira-root.rule=Host(`prymeiradigital.com.br`)
         - traefik.http.routers.prymeira-root.entrypoints=websecure
+        - traefik.http.routers.prymeira-root.tls=true
         - traefik.http.routers.prymeira-root.tls.certresolver=letsencryptresolver
         - traefik.http.routers.prymeira-root.service=prymeira-hub
+        - traefik.http.routers.prymeira-www.rule=Host(`www.prymeiradigital.com.br`)
+        - traefik.http.routers.prymeira-www.entrypoints=websecure
+        - traefik.http.routers.prymeira-www.tls=true
+        - traefik.http.routers.prymeira-www.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.prymeira-www.service=prymeira-hub
 
 volumes:
   prymeira_account_postgres_data:
