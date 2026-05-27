@@ -187,6 +187,25 @@ export function resolveProductUrl(productKey: string, fallbackUrl: string | null
   return resolveConfiguredProductUrl(productKey, fallbackUrl);
 }
 
+export type PlanPrice = {
+  id: string;
+  priceMonthly: number;
+  priceAnnual: number;
+};
+
+export type PlansResponse = {
+  plans: PlanPrice[];
+  solos: PlanPrice[];
+};
+
+export async function fetchPlans(): Promise<PlansResponse> {
+  const response = await fetch(`${accountApiUrl}/public/plans`);
+  if (!response.ok) {
+    throw new Error("Não foi possível carregar os preços.");
+  }
+  return response.json() as Promise<PlansResponse>;
+}
+
 export async function createCheckoutSession(
   token: string,
   payload: {

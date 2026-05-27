@@ -10,7 +10,7 @@ import {
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
-import { createCheckoutSession } from "./api";
+import { createCheckoutSession, fetchPlans, type PlansResponse } from "./api";
 import { readProductPresentation } from "./products";
 import logomark from "./assets/prymeira-selo.png";
 
@@ -126,6 +126,13 @@ export function PlansPage() {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [{ productKey: ctxProductKey, success }] = useState(readPlansQuery);
+  const [stripePrices, setStripePrices] = useState<PlansResponse | null>(null);
+
+  useEffect(() => {
+    fetchPlans()
+      .then(setStripePrices)
+      .catch(() => { /* fallback to hardcoded prices */ });
+  }, []);
   const highlightedRef = useRef<HTMLDivElement | null>(null);
 
   const scrollTargetId = ctxProductKey
@@ -175,6 +182,24 @@ export function PlansPage() {
   }
 
   const ctxProductName = ctxProductKey ? (PRODUCT_NAMES[ctxProductKey] ?? ctxProductKey) : null;
+
+  function resolvePrice(staticPlan: Plan | SoloPlan, billing: Billing): { display: string; annualTotal: string } {
+    const stripeEntry = [
+      ...(stripePrices?.plans ?? []),
+      ...(stripePrices?.solos ?? [])
+    ].find((p) => p.id === staticPlan.id);
+
+    const monthly = stripeEntry?.priceMonthly ?? staticPlan.priceMonthly;
+    const annual  = stripeEntry?.priceAnnual  ?? staticPlan.priceAnnual;
+
+    const displayMonthly = String(monthly);
+    const displayAnnualPerMonth = String(Math.round(annual / 10));
+    const displayAnnualTotal = annual.toLocaleString("pt-BR");
+
+    return billing === "monthly"
+      ? { display: displayMonthly, annualTotal: "" }
+      : { display: displayAnnualPerMonth, annualTotal: displayAnnualTotal };
+  }
 
   return (
     <div style={{ background: "var(--cream)", minHeight: "100vh" }}>
@@ -279,17 +304,21 @@ export function PlansPage() {
                 <p className="pkg__name">{plan.name}</p>
 
                 {/* Price */}
-                <p className="pkg__price">
-                  <em>R$</em>{" "}
-                  {billing === "monthly"
-                    ? plan.priceMonthly
-                    : Math.round(plan.priceAnnual / 10)}
-                </p>
-                <p className="pkg__price-period">
-                  {billing === "monthly"
-                    ? "/mês · cobrado mensalmente"
-                    : `/mês · cobrado R$ ${plan.priceAnnual.toLocaleString("pt-BR")}/ano`}
-                </p>
+                {(() => {
+                  const { display, annualTotal } = resolvePrice(plan, billing);
+                  return (
+                    <>
+                      <p className="pkg__price">
+                        <em>R$</em>{" "}{display}
+                      </p>
+                      <p className="pkg__price-period">
+                        {billing === "monthly"
+                          ? "/mês · cobrado mensalmente"
+                          : `/mês · cobrado R$ ${annualTotal}/ano`}
+                      </p>
+                    </>
+                  );
+                })()}
 
                 <div className="pkg__divider" />
 
@@ -367,13 +396,19 @@ export function PlansPage() {
 
                 <div className="solo__right">
                   <div>
-                    <p className="solo__price">
-                      R$ {billing === "monthly" ? solo.priceMonthly : Math.round(solo.priceAnnual / 10)}
-                      <em>/mês</em>
-                    </p>
-                    {billing === "annual" && (
-                      <p className="solo__price-annual">R$ {solo.priceAnnual}/ano</p>
-                    )}
+                    {(() => {
+                      const { display, annualTotal } = resolvePrice(solo, billing);
+                      return (
+                        <>
+                          <p className="solo__price">
+                            R$ {display}<em>/mês</em>
+                          </p>
+                          {billing === "annual" && (
+                            <p className="solo__price-annual">R$ {annualTotal}/ano</p>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                   <button
                     className="solo__cta"

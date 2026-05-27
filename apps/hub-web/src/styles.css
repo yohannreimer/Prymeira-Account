@@ -1323,7 +1323,7 @@ img { display: block; max-width: 100%; }
 .pkg__badge--incl { background: transparent; border: 1px solid var(--gold); color: var(--gold); }
 .pkg__icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
 .pkg__name { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); margin-bottom: 8px; }
-.pkg__price { font-family: var(--serif); font-size: 34px; font-weight: 700; color: var(--cream); line-height: 1; margin-bottom: 4px; }
+.pkg__price { font-family: var(--serif); font-size: 34px; font-weight: 700; color: var(--ink); line-height: 1; margin-bottom: 4px; }
 .pkg__price em { font-size: 17px; font-style: normal; }
 .pkg__price-period { font-size: 11px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
 .pkg__divider { height: 1px; background: var(--rule); margin-bottom: 16px; }
