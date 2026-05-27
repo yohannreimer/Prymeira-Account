@@ -108,6 +108,15 @@ const PAIN_CARDS = [
   },
 ];
 
+const COMPETITORS = [
+  { tool: "Zenvia / WATI", category: "WhatsApp API", price: 497, product: "Talk", color: "#2a5f4a" },
+  { tool: "RD Station CRM", category: "CRM & Vendas", price: 399, product: "Vincula CRM", color: "#8b5cf6" },
+  { tool: "Conta Azul Pro", category: "Financeiro", price: 259, product: "Fluvia", color: "#0a3d6b" },
+  { tool: "Monday.com", category: "Operações", price: 349, product: "Velio", color: "#f0c040" },
+  { tool: "Opus Clip Pro", category: "Corte de vídeo", price: 249, product: "Flowcut", color: "#fcc009" },
+  { tool: "Notion Pro", category: "Produtividade", price: 99, product: "Operis", color: "#f97316" },
+];
+
 // ─── Responsive hook ─────────────────────────────────────────────────────────
 
 function useIsMobile(): boolean {
@@ -142,7 +151,9 @@ function Navbar({ isMobile }: { isMobile: boolean }) {
       {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <img src={logomark} alt="" width={28} height={28} style={{ display: "block" }} />
-        <img src={logotype} alt="Prymeira" height={18} style={{ display: "block" }} />
+        <span style={{ color: "#fff", fontSize: 16, fontWeight: 700, letterSpacing: "-0.02em", fontFamily: FONT }}>
+          Prymeira
+        </span>
       </div>
 
       {/* Anchor links — desktop only */}
@@ -528,6 +539,10 @@ function Produtos({ isMobile }: { isMobile: boolean }) {
 // ─── Comparativo ─────────────────────────────────────────────────────────────
 
 function Comparativo({ isMobile }: { isMobile: boolean }) {
+  const totalMarket = COMPETITORS.reduce((sum, c) => sum + c.price, 0);
+  const savings = totalMarket - 247;
+  const cols = isMobile ? "1fr auto auto" : "1fr 130px 170px";
+
   return (
     <section
       id="comparativo"
@@ -537,110 +552,175 @@ function Comparativo({ isMobile }: { isMobile: boolean }) {
         fontFamily: FONT,
       }}
     >
-      <div style={{ maxWidth: 700, margin: "0 auto", textAlign: "center" }}>
-        {/* Badge */}
-        <div
-          style={{
-            display: "inline-block",
-            background: "#1a1a18",
-            border: "1px solid #2a2a28",
-            color: "#a0a09e",
-            fontSize: 11,
-            fontWeight: 600,
-            letterSpacing: "0.08em",
-            padding: "5px 12px",
-            borderRadius: 20,
-            marginBottom: 24,
-            textTransform: "uppercase",
-          }}
-        >
-          COMPARATIVO DE MERCADO
-        </div>
-
-        <h2
-          style={{
-            color: "#fff",
-            fontSize: isMobile ? 26 : 38,
-            fontWeight: 900,
-            letterSpacing: "-0.03em",
-            lineHeight: 1.15,
-            margin: "0 0 48px",
-          }}
-        >
-          Stack Prymeira vs. pagar separado
-        </h2>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
-            gap: 16,
-            marginBottom: 24,
-          }}
-        >
-          {/* Mercado */}
+      <div style={{ maxWidth: 860, margin: "0 auto" }}>
+        {/* Badge + headline */}
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
           <div
             style={{
-              background: "#111110",
-              border: "1px solid #1f1f1d",
-              borderRadius: 10,
-              padding: 32,
-              textAlign: "left",
+              display: "inline-block",
+              background: "#1a1a18",
+              border: "1px solid #2a2a28",
+              color: "#a0a09e",
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: "0.08em",
+              padding: "5px 12px",
+              borderRadius: 20,
+              marginBottom: 24,
+              textTransform: "uppercase",
             }}
           >
-            <div style={{ color: "#6a6a68", fontSize: 13, marginBottom: 12 }}>Mercado</div>
-            <div
-              style={{
-                color: "#fff",
-                fontSize: 40,
-                fontWeight: 900,
-                letterSpacing: "-0.04em",
-                lineHeight: 1,
-              }}
-            >
-              R$ 2.000
-              <span style={{ fontSize: 18, fontWeight: 400, color: "#6a6a68" }}>/mês</span>
-            </div>
-            <div style={{ color: "#4a4a48", fontSize: 13, marginTop: 10 }}>
-              Estimativa mínima para stack equivalente*
-            </div>
+            COMPARATIVO DE MERCADO
           </div>
+          <h2
+            style={{
+              color: "#fff",
+              fontSize: isMobile ? 26 : 38,
+              fontWeight: 900,
+              letterSpacing: "-0.03em",
+              lineHeight: 1.15,
+              margin: 0,
+            }}
+          >
+            Stack Prymeira vs. pagar separado
+          </h2>
+        </div>
 
-          {/* Prymeira */}
+        {/* Table */}
+        <div
+          style={{
+            border: "1px solid #1f1f1d",
+            borderRadius: 12,
+            overflow: "hidden",
+          }}
+        >
+          {/* Header row */}
           <div
             style={{
+              display: "grid",
+              gridTemplateColumns: cols,
               background: "#111110",
-              border: "2px solid #fcc009",
-              borderRadius: 10,
-              padding: 32,
-              textAlign: "left",
+              padding: isMobile ? "10px 16px" : "12px 24px",
+              borderBottom: "1px solid #1f1f1d",
+              gap: isMobile ? 8 : 0,
             }}
           >
+            <span style={{ color: "#4a4a48", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+              Ferramenta
+            </span>
+            <span style={{ color: "#4a4a48", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", textAlign: "right" }}>
+              Preço/mês
+            </span>
+            <span style={{ color: "#4a4a48", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", textAlign: "right" }}>
+              Na Suite
+            </span>
+          </div>
+
+          {/* Competitor rows */}
+          {COMPETITORS.map((c, i) => (
             <div
-              style={{ color: "#fcc009", fontSize: 13, fontWeight: 600, marginBottom: 12 }}
-            >
-              Prymeira Suite
-            </div>
-            <div
+              key={c.tool}
               style={{
-                color: "#fcc009",
-                fontSize: 40,
-                fontWeight: 900,
-                letterSpacing: "-0.04em",
-                lineHeight: 1,
+                display: "grid",
+                gridTemplateColumns: cols,
+                padding: isMobile ? "12px 16px" : "14px 24px",
+                borderBottom: "1px solid #111110",
+                background: i % 2 === 0 ? "#0d0d0c" : "#0a0a09",
+                alignItems: "center",
+                gap: isMobile ? 8 : 0,
               }}
             >
-              R$ 247
-              <span style={{ fontSize: 18, fontWeight: 400, color: "#a0a09e" }}>/mês</span>
+              <div>
+                <div style={{ color: "#d0d0ce", fontSize: isMobile ? 13 : 14, fontWeight: 500 }}>
+                  {c.tool}
+                </div>
+                <div style={{ color: "#4a4a48", fontSize: 11, marginTop: 2 }}>{c.category}</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <span style={{ color: "#e05555", fontSize: isMobile ? 13 : 14, fontWeight: 700 }}>
+                  R$ {c.price.toLocaleString("pt-BR")}
+                </span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  gap: 6,
+                }}
+              >
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background: c.color,
+                    flexShrink: 0,
+                  }}
+                />
+                <span style={{ color: c.color, fontSize: isMobile ? 12 : 13, fontWeight: 600, whiteSpace: "nowrap" }}>
+                  {c.product}
+                </span>
+              </div>
             </div>
-            <div style={{ color: "#6a6a68", fontSize: 13, marginTop: 10 }}>
-              Stack completo, um login, sem surpresas
+          ))}
+
+          {/* Total row */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: cols,
+              padding: isMobile ? "16px 16px" : "20px 24px",
+              background: "#111110",
+              borderTop: "2px solid #1f1f1d",
+              alignItems: "center",
+              gap: isMobile ? 8 : 0,
+            }}
+          >
+            <span style={{ color: "#8a8a88", fontSize: 13, fontWeight: 600 }}>
+              Total mensal
+            </span>
+            <div style={{ textAlign: "right" }}>
+              <span style={{ color: "#e05555", fontSize: isMobile ? 18 : 24, fontWeight: 900, letterSpacing: "-0.03em" }}>
+                R$ {totalMarket.toLocaleString("pt-BR")}
+              </span>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <span style={{ color: "#fcc009", fontSize: isMobile ? 18 : 24, fontWeight: 900, letterSpacing: "-0.03em" }}>
+                R$ 247
+              </span>
+              <div style={{ color: "#4ade80", fontSize: 11, fontWeight: 600, marginTop: 2 }}>
+                Suite Completa
+              </div>
             </div>
           </div>
         </div>
 
-        <p style={{ color: "#4a4a48", fontSize: 12, margin: 0 }}>
-          *Estimativa baseada em ferramentas equivalentes no mercado brasileiro
+        {/* Savings callout */}
+        <div
+          style={{
+            marginTop: 16,
+            padding: isMobile ? "14px 16px" : "16px 24px",
+            background: "#0d1a0d",
+            border: "1px solid #1a3a1a",
+            borderRadius: 10,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 8,
+          }}
+        >
+          <span style={{ color: "#6a8a6a", fontSize: 13 }}>
+            Economia real por mês com a Suite Completa:
+          </span>
+          <span style={{ color: "#4ade80", fontSize: isMobile ? 18 : 22, fontWeight: 900, letterSpacing: "-0.03em" }}>
+            − R$ {savings.toLocaleString("pt-BR")}/mês
+          </span>
+        </div>
+
+        <p style={{ color: "#3a3a38", fontSize: 11, margin: "14px 0 0", textAlign: "center" }}>
+          *Valores aproximados de planos básicos de cada ferramenta no mercado brasileiro. Preços podem variar.
         </p>
       </div>
     </section>
