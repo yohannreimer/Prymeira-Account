@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { createCheckoutSession, fetchPlans, type PlansResponse } from "./api";
+import { buildCheckoutSuccessUrl } from "./checkout-flow";
 import { readProductPresentation } from "./products";
 import logomark from "./assets/prymeira-selo.png";
 
@@ -116,6 +117,7 @@ function readPlansQuery() {
   const params = new URLSearchParams(window.location.search);
   return {
     productKey: params.get("product_key")?.trim() || null,
+    planId: params.get("plan")?.trim() || null,
     success: params.get("success") === "1"
   };
 }
@@ -127,7 +129,7 @@ export function PlansPage() {
   const [billing, setBilling] = useState<Billing>("monthly");
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [{ productKey: ctxProductKey, success }] = useState(readPlansQuery);
+  const [{ productKey: ctxProductKey, planId: ctxPlanId, success }] = useState(readPlansQuery);
   const [stripePrices, setStripePrices] = useState<PlansResponse | null>(null);
 
   useEffect(() => {
@@ -141,6 +143,8 @@ export function PlansPage() {
     ? (SOLOS.find((s) => s.productKey === ctxProductKey)?.id
       ?? PLANS.find((p) => p.productKeys.includes(ctxProductKey))?.id
       ?? null)
+    : ctxPlanId && [...PLANS, ...SOLOS].some((p) => p.id === ctxPlanId)
+    ? ctxPlanId
     : null;
 
   useEffect(() => {
@@ -164,12 +168,10 @@ export function PlansPage() {
       if (!token) throw new Error("Sessão expirada. Faça login novamente.");
 
       const origin = window.location.origin;
-      const productParam = ctxProductKey ? `&product_key=${ctxProductKey}` : "";
-
       const { checkout_url } = await createCheckoutSession(token, {
         plan_id: planId,
         billing,
-        success_url: `${origin}/planos?success=1${productParam}`,
+        success_url: buildCheckoutSuccessUrl(origin, planId),
         cancel_url: `${origin}/planos${ctxProductKey ? `?product_key=${ctxProductKey}` : ""}`
       });
 

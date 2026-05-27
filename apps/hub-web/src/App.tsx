@@ -27,10 +27,12 @@ import {
   syncCurrentCustomer,
 } from "./api";
 import { AdminPanel } from "./AdminPanel";
+import { readCheckoutSuccessQuery } from "./checkout-flow";
 import { LandingPage } from "./LandingPage";
 import { PlansPage } from "./PlansPage";
 import { formatPlanLabel, formatProductLabel, formatRoleLabel, formatWorkspaceTypeLabel } from "./labels";
 import { readProductPresentation } from "./products";
+import { shouldRenderPublicLanding } from "./public-routing";
 import type { AccountProductAccess, AccountProductsResponse } from "./types";
 import logomark from "./assets/prymeira-selo.png";
 import logotype from "./assets/prymeira-logo.png";
@@ -365,6 +367,9 @@ function Hub() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [{ checkoutSuccess, planId: checkoutPlanId }] = useState(() =>
+    readCheckoutSuccessQuery(window.location.search)
+  );
 
   useEffect(() => {
     let active = true;
@@ -566,6 +571,25 @@ function Hub() {
         </div>
       </section>
 
+      {checkoutSuccess && (
+        <div className="hub-success-wrap">
+          <div className="hub-success" role="status">
+            <div>
+              <p className="hub-success__title">
+                Teste grátis iniciado{checkoutPlanId ? ` - ${formatPlanLabel(checkoutPlanId)}` : ""}.
+              </p>
+              <p className="hub-success__text">
+                Seus produtos já estão sendo liberados. Se algum app ainda aparecer bloqueado,
+                aguarde alguns segundos e atualize a página.
+              </p>
+            </div>
+            <a className="hub-success__cta" href="#produtos">
+              Ver meus produtos
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* PRODUCTS */}
       <main className="products-wrap" id="produtos">
         <div className="products-wrap__inner">
@@ -750,12 +774,7 @@ function Landing() {
 }
 
 export function App() {
-  const isLandingHost =
-    window.location.hostname === "prymeiradigital.com.br" ||
-    window.location.hostname === "www.prymeiradigital.com.br";
-  const isLandingPreview = window.location.pathname === "/landing-preview";
-
-  if (isLandingHost || isLandingPreview) {
+  if (shouldRenderPublicLanding(window.location)) {
     return <LandingPage />;
   }
 

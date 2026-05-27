@@ -2,6 +2,7 @@ import { ClerkProvider } from "@clerk/clerk-react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { loadClerkPublishableKey } from "./runtime-config";
+import { shouldRenderPublicLanding } from "./public-routing";
 
 const root = document.getElementById("root");
 
@@ -20,14 +21,18 @@ if (!root) {
 
 const rootRenderer = createRoot(root);
 
-void loadClerkPublishableKey().then((publishableKey) => {
-  rootRenderer.render(
-    publishableKey ? (
-      <ClerkProvider publishableKey={publishableKey}>
-        <App />
-      </ClerkProvider>
-    ) : (
-      <MissingConfig />
-    )
-  );
-});
+if (shouldRenderPublicLanding(window.location)) {
+  rootRenderer.render(<App />);
+} else {
+  void loadClerkPublishableKey().then((publishableKey) => {
+    rootRenderer.render(
+      publishableKey ? (
+        <ClerkProvider publishableKey={publishableKey}>
+          <App />
+        </ClerkProvider>
+      ) : (
+        <MissingConfig />
+      )
+    );
+  });
+}

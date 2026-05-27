@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { buildPlanSelectionUrl } from "./checkout-flow";
 import logomark from "./assets/prymeira-selo.png";
 import logotype from "./assets/prymeira-logo.png";
 
@@ -6,6 +7,7 @@ import logotype from "./assets/prymeira-logo.png";
 
 const HUB_URL = "https://hub.prymeiradigital.com.br";
 const HUB_SIGNUP_URL = "https://hub.prymeiradigital.com.br/?tab=signup";
+const HUB_TRIAL_URL = "https://hub.prymeiradigital.com.br/planos?plan=empresa";
 const HUB_PLANS_URL = "https://hub.prymeiradigital.com.br/planos";
 const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
@@ -192,7 +194,7 @@ function Navbar({ isMobile }: { isMobile: boolean }) {
           </a>
         )}
         <a
-          href={HUB_SIGNUP_URL}
+          href={HUB_TRIAL_URL}
           style={{
             background: "#fcc009",
             color: "#0a0a09",
@@ -205,7 +207,7 @@ function Navbar({ isMobile }: { isMobile: boolean }) {
             whiteSpace: "nowrap",
           }}
         >
-          Criar conta
+          Começar teste
         </a>
       </div>
     </nav>
@@ -284,7 +286,7 @@ function Hero({ isMobile }: { isMobile: boolean }) {
           }}
         >
           <a
-            href={HUB_SIGNUP_URL}
+            href={HUB_TRIAL_URL}
             style={{
               background: "#fcc009",
               color: "#0a0a09",
@@ -295,7 +297,7 @@ function Hero({ isMobile }: { isMobile: boolean }) {
               textDecoration: "none",
             }}
           >
-            Criar conta grátis →
+            Começar teste grátis →
           </a>
           <a
             href="#planos"
@@ -934,7 +936,7 @@ function Planos({ isMobile }: { isMobile: boolean }) {
               </div>
 
               <a
-                href={HUB_PLANS_URL}
+                href={buildPlanSelectionUrl(HUB_URL, plan.id)}
                 style={{
                   display: "block",
                   textAlign: "center",
@@ -947,7 +949,7 @@ function Planos({ isMobile }: { isMobile: boolean }) {
                   textDecoration: "none",
                 }}
               >
-                Assinar
+                Começar teste
               </a>
             </div>
           ))}
@@ -1040,7 +1042,7 @@ function CtaFinal({ isMobile }: { isMobile: boolean }) {
         </p>
 
         <a
-          href={HUB_SIGNUP_URL}
+          href={HUB_TRIAL_URL}
           style={{
             display: "inline-block",
             background: "#fcc009",
@@ -1052,7 +1054,7 @@ function CtaFinal({ isMobile }: { isMobile: boolean }) {
             textDecoration: "none",
           }}
         >
-          Criar conta grátis →
+          Começar teste grátis →
         </a>
       </div>
     </section>
