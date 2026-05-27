@@ -40,7 +40,7 @@ services:
       CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
       ADMIN_EMAILS: ${ADMIN_EMAILS}
       ADMIN_ACTION_TOKEN: ${ADMIN_ACTION_TOKEN}
-      CORS_ORIGINS: https://hub.prymeiradigital.com.br,https://fluvia.prymeiradigital.com.br,https://velio.prymeiradigital.com.br,https://operis.prymeiradigital.com.br,https://flowcut.prymeiradigital.com.br,https://vincula.prymeiradigital.com.br
+      CORS_ORIGINS: https://hub.prymeiradigital.com.br,https://fluvia.prymeiradigital.com.br,https://velio.prymeiradigital.com.br,https://operis.prymeiradigital.com.br,https://flowcut.prymeiradigital.com.br,https://vincula.prymeiradigital.com.br,https://talk.prymeiradigital.com.br
       PORT: 3001
       NODE_ENV: production
     deploy:
