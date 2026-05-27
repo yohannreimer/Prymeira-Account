@@ -25,7 +25,8 @@
 
 | Ação | Arquivo |
 |---|---|
-| COPIAR (manual) | `apps/web/public/prymeira-logo.png` |
+| COPIAR (manual) | `apps/web/public/prymeira-logo.png` (logotipo horizontal) |
+| COPIAR (manual) | `apps/web/public/prymeira-selo.png` (ícone/marca) |
 | CRIAR | `apps/web/src/pages/sign-in-fonts.css` |
 | CRIAR | `apps/web/src/pages/sign-in-page.tsx` |
 | MODIFICAR | `apps/web/src/App.tsx` |
@@ -248,7 +249,8 @@ git commit -m "feat(login): add theme config and decorative elements for Fluvia/
 ```tsx
 // apps/frontend/src/pages/LoginPage.tsx
 import { SignIn } from '@clerk/clerk-react';
-import prymeiraLogo from '../assets/prymeira-logo.png';
+import prymeiraLogo from '../assets/prymeira-logo.png';   // logotipo horizontal (painel direito)
+import prymeiraSelo from '../assets/prymeira-selo.png';   // ícone/marca dourada (painel esquerdo)
 import { getAppTheme } from './login-themes';
 import { LoginDecoration } from './login-decorations';
 import './login-fonts.css';
@@ -271,12 +273,12 @@ export function LoginPage() {
           overflow: 'hidden',
         }}
       >
-        {/* Logo Prymeira — pequena, topo esquerdo */}
+        {/* Prymeira — ícone/marca pequena no topo esquerdo */}
         <div style={{ position: 'relative', zIndex: 2 }}>
           <img
-            src={prymeiraLogo}
+            src={prymeiraSelo}
             alt="Prymeira"
-            style={{ height: 18, opacity: theme.prymeiraLogoOpacity }}
+            style={{ height: 22, opacity: theme.prymeiraLogoOpacity }}
           />
         </div>
 
@@ -436,14 +438,17 @@ git commit -m "feat(login): split-screen login page for Fluvia and Velio"
 - Create: `apps/web/src/pages/sign-in-fonts.css`
 - Create: `apps/web/src/pages/sign-in-page.tsx`
 
-- [ ] **Step 1: Copiar o PNG da Prymeira para o public do Operis**
+- [ ] **Step 1: Copiar os assets da Prymeira para o public do Operis**
 
 ```bash
 cp "/Users/yohannreimer/Downloads/Locais/Plataforma Modular/apps/frontend/src/assets/prymeira-logo.png" \
    "/Users/yohannreimer/Downloads/operis-dev/operis/apps/web/public/prymeira-logo.png"
+
+cp "/Users/yohannreimer/Downloads/Locais/Plataforma Modular/apps/frontend/src/assets/prymeira-selo.png" \
+   "/Users/yohannreimer/Downloads/operis-dev/operis/apps/web/public/prymeira-selo.png"
 ```
 
-O arquivo ficará acessível em runtime como `/prymeira-logo.png` (via Vite public dir).
+Ambos ficam acessíveis em runtime via Vite public dir (`/prymeira-logo.png`, `/prymeira-selo.png`).
 
 - [ ] **Step 2: Criar `sign-in-fonts.css`**
 
@@ -512,12 +517,12 @@ export function SignInPage() {
           overflow: 'hidden',
         }}
       >
-        {/* Logo Prymeira — pequena, topo esquerdo */}
+        {/* Prymeira — ícone/marca pequena no topo esquerdo */}
         <div style={{ position: 'relative', zIndex: 2 }}>
           <img
-            src="/prymeira-logo.png"
+            src="/prymeira-selo.png"
             alt="Prymeira"
-            style={{ height: 18, opacity: 0.22 }}
+            style={{ height: 22, opacity: 0.22 }}
           />
         </div>
 
