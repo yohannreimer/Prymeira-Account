@@ -27,6 +27,7 @@ import {
   syncCurrentCustomer,
 } from "./api";
 import { AdminPanel } from "./AdminPanel";
+import { LandingPage } from "./LandingPage";
 import { PlansPage } from "./PlansPage";
 import { formatPlanLabel, formatProductLabel, formatRoleLabel, formatWorkspaceTypeLabel } from "./labels";
 import { readProductPresentation } from "./products";
@@ -749,6 +750,15 @@ function Landing() {
 }
 
 export function App() {
+  const isLandingHost =
+    window.location.hostname === "prymeiradigital.com.br" ||
+    window.location.hostname === "www.prymeiradigital.com.br";
+  const isLandingPreview = window.location.pathname === "/landing-preview";
+
+  if (isLandingHost || isLandingPreview) {
+    return <LandingPage />;
+  }
+
   const isAdminRoute = window.location.pathname.startsWith("/admin");
   const isAccessDeniedRoute = window.location.pathname.startsWith("/acesso-negado");
   const isPlansRoute = window.location.pathname.startsWith("/planos");
