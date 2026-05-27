@@ -1346,6 +1346,7 @@ img { display: block; max-width: 100%; }
 /* ─── PLANS PAGE ─── */
 .plans-page { max-width: 1120px; margin: 0 auto; padding: 40px 32px 80px; }
 .plans-ctx-banner { background: #2a2200; border: 1px solid #5a4800; border-radius: 10px; padding: 14px 20px; margin-bottom: 36px; font-size: 13px; color: var(--gold); display: flex; align-items: center; gap: 10px; }
+.plans-choice-banner { background: #fff8d7; border: 1px solid var(--gold); border-radius: 10px; padding: 14px 20px; margin-bottom: 36px; font-size: 13px; color: #5f4700; display: flex; align-items: center; gap: 10px; }
 .plans-success-banner { background: #0a2a12; border: 1px solid #1a5c2a; border-radius: 10px; padding: 14px 20px; margin-bottom: 36px; font-size: 13px; color: #4ade80; display: flex; align-items: center; gap: 10px; }
 .plans-hd { text-align: center; margin-bottom: 36px; }
 .plans-hd__eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
@@ -1362,9 +1363,11 @@ img { display: block; max-width: 100%; }
 .pkg { background: var(--surface); border: 1px solid var(--rule); border-radius: 14px; padding: 24px 20px 20px; display: flex; flex-direction: column; gap: 0; transition: border-color .15s; }
 .pkg--recommended { border-color: var(--gold); position: relative; }
 .pkg--highlighted { border-color: var(--gold); box-shadow: 0 0 0 2px color-mix(in srgb, var(--gold) 18%, transparent); }
+.pkg--selected { background: #fffdf5; border-color: var(--gold); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 24%, transparent), 0 12px 26px rgba(12,12,12,.07); }
 .pkg__badge { display: inline-flex; align-items: center; gap: 5px; font-size: 9px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 3px 9px; border-radius: 5px; margin-bottom: 16px; width: fit-content; }
 .pkg__badge--pop { background: var(--gold); color: #0d0d0c; }
 .pkg__badge--incl { background: transparent; border: 1px solid var(--gold); color: var(--gold); }
+.pkg__badge--selected { background: var(--black); color: var(--gold); }
 .pkg__icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
 .pkg__name { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); margin-bottom: 8px; }
 .pkg__price { font-family: var(--serif); font-size: 34px; font-weight: 700; color: var(--ink); line-height: 1; margin-bottom: 4px; }

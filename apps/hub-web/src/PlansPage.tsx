@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { createCheckoutSession, fetchPlans, type PlansResponse } from "./api";
 import { buildCheckoutSuccessUrl } from "./checkout-flow";
+import { resolveSelectedPlanContext } from "./plans-selection";
 import { readProductPresentation } from "./products";
 import logomark from "./assets/prymeira-selo.png";
 
@@ -146,6 +147,13 @@ export function PlansPage() {
     : ctxPlanId && [...PLANS, ...SOLOS].some((p) => p.id === ctxPlanId)
     ? ctxPlanId
     : null;
+  const selectedPlanContext = resolveSelectedPlanContext(
+    ctxPlanId,
+    ctxProductKey,
+    [...PLANS, ...SOLOS].map((plan) => plan.id),
+    scrollTargetId ? [scrollTargetId] : []
+  );
+  const hasExplicitPlanSelection = selectedPlanContext.source === "plan";
 
   useEffect(() => {
     if (scrollTargetId && highlightedRef.current) {
@@ -227,6 +235,15 @@ export function PlansPage() {
           </div>
         )}
 
+        {selectedPlanContext.source === "plan" && selectedPlanContext.selectedName && !success && (
+          <div className="plans-choice-banner" role="status">
+            <Sparkles size={14} aria-hidden="true" />
+            <span>
+              Você escolheu <strong>{selectedPlanContext.selectedName}</strong>. Comece seu teste grátis de {TRIAL_DAYS} dias para liberar os apps desse plano.
+            </span>
+          </div>
+        )}
+
         {/* Success banner */}
         {success && (
           <div className="plans-success-banner" role="status">
@@ -268,9 +285,12 @@ export function PlansPage() {
         {/* Package grid */}
         <div className="plans-grid" role="list">
           {PLANS.map((plan) => {
-            const isHighlighted = ctxProductKey !== null && plan.productKeys.includes(ctxProductKey);
+            const isSelected = selectedPlanContext.selectedId === plan.id;
+            const isHighlighted = isSelected || (ctxProductKey !== null && plan.productKeys.includes(ctxProductKey));
             const isLoading = loadingId === plan.id;
-            const ctaClass = plan.recommended
+            const ctaClass = isSelected
+              ? "pkg__cta pkg__cta--gold"
+              : plan.recommended && !hasExplicitPlanSelection
               ? "pkg__cta pkg__cta--gold"
               : isHighlighted
               ? "pkg__cta pkg__cta--primary"
@@ -281,12 +301,15 @@ export function PlansPage() {
             return (
               <div
                 key={plan.id}
-                className={`pkg${plan.recommended ? " pkg--recommended" : ""}${isHighlighted ? " pkg--highlighted" : ""}`}
+                className={`pkg${plan.recommended && !hasExplicitPlanSelection ? " pkg--recommended" : ""}${isHighlighted ? " pkg--highlighted" : ""}${isSelected ? " pkg--selected" : ""}`}
                 role="listitem"
                 {...refProp}
               >
                 {/* Badges */}
-                {plan.recommended && (
+                {isSelected && (
+                  <span className="pkg__badge pkg__badge--selected">✦ Seu plano escolhido</span>
+                )}
+                {plan.recommended && !isSelected && !hasExplicitPlanSelection && (
                   <span className="pkg__badge pkg__badge--pop">✦ Mais popular</span>
                 )}
                 {isHighlighted && !plan.recommended && (
@@ -370,7 +393,8 @@ export function PlansPage() {
 
         <div className="plans-solos" role="list">
           {SOLOS.map((solo) => {
-            const isHighlighted = ctxProductKey === solo.productKey;
+            const isSelected = selectedPlanContext.selectedId === solo.id;
+            const isHighlighted = isSelected || ctxProductKey === solo.productKey;
             const pres = readProductPresentation(solo.productKey);
             const isLoading = loadingId === solo.id;
             const refProp = solo.id === scrollTargetId ? { ref: highlightedRef } : {};
@@ -378,7 +402,7 @@ export function PlansPage() {
             return (
               <div
                 key={solo.id}
-                className={`solo${isHighlighted ? " solo--highlighted" : ""}`}
+                className={`solo${isHighlighted ? " solo--highlighted" : ""}${isSelected ? " solo--selected" : ""}`}
                 role="listitem"
                 {...refProp}
               >
@@ -393,7 +417,10 @@ export function PlansPage() {
                 <div className="solo__info">
                   <p className="solo__name">{solo.name}</p>
                   <p className="solo__desc">{solo.description}</p>
-                  {isHighlighted && (
+                  {isSelected && (
+                    <span className="solo__badge">✦ Seu plano escolhido</span>
+                  )}
+                  {isHighlighted && ctxProductKey && (
                     <span className="solo__badge">✦ Inclui {ctxProductName}</span>
                   )}
                 </div>
