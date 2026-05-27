@@ -88,6 +88,10 @@ services:
         - traefik.http.routers.prymeira-hub.tls.certresolver=letsencryptresolver
         - traefik.http.routers.prymeira-hub.service=prymeira-hub
         - traefik.http.services.prymeira-hub.loadbalancer.server.port=80
+        - traefik.http.routers.prymeira-root.rule=Host(`prymeiradigital.com.br`) || Host(`www.prymeiradigital.com.br`)
+        - traefik.http.routers.prymeira-root.entrypoints=websecure
+        - traefik.http.routers.prymeira-root.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.prymeira-root.service=prymeira-hub
 
 volumes:
   prymeira_account_postgres_data:
