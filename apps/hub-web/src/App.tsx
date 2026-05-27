@@ -31,6 +31,7 @@ import { readCheckoutSuccessQuery } from "./checkout-flow";
 import { LandingPage } from "./LandingPage";
 import { PlansPage } from "./PlansPage";
 import { formatPlanLabel, formatProductLabel, formatRoleLabel, formatWorkspaceTypeLabel } from "./labels";
+import { resolveProductDescription } from "./product-card-copy";
 import { readProductPresentation } from "./products";
 import { shouldRenderPublicLanding } from "./public-routing";
 import type { AccountProductAccess, AccountProductsResponse } from "./types";
@@ -165,7 +166,10 @@ function ProductCard({ product }: { product: AccountProductAccess }) {
       <div className="pcard__cat">{presentation.category}</div>
       <div className="pcard__name">{product.name || formatProductLabel(product.product_key)}</div>
       <p className="pcard__desc">
-        {presentation.description ?? product.description ?? "Produto Prymeira conectado à sua conta central."}
+        {resolveProductDescription({
+          productDescription: product.description,
+          presentationDescription: presentation.description
+        })}
       </p>
       <div className="pcard__footer">
         {disabled ? (
@@ -336,7 +340,10 @@ function AccessDeniedPage() {
             <div className="access-card__category">{presentation.category}</div>
             <h2 className="access-card__title">{productName}</h2>
             <p className="access-card__desc">
-              {presentation.description ?? product?.description ?? "Produto Prymeira conectado à sua conta central."}
+              {resolveProductDescription({
+                productDescription: product?.description,
+                presentationDescription: presentation.description
+              })}
             </p>
             <div className="access-card__facts">
               <div>

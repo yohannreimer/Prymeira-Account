@@ -254,6 +254,20 @@ export function AdminPanel() {
     });
   }
 
+  useEffect(() => {
+    if (products.length === 0 || editingProductKey) return;
+
+    const preferredProduct =
+      products.find((product) => product.productKey === productKey) ??
+      products.find((product) => product.status === "active") ??
+      products[0];
+
+    if (preferredProduct) {
+      editProduct(preferredProduct);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingProductKey, productKey, products]);
+
   async function submitProduct(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const productPayload = {
