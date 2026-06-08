@@ -1,0 +1,10 @@
+{
+  "userId": "demo_user",
+  "clerkUserId": "demo_user",
+  "email": "demo@prymeira.local",
+  "name": "Usuario Demo",
+  "workspaceId": "demo_workspace",
+  "workspaceName": "Prymeira Demo",
+  "workspaceRole": "owner",
+  "token": "demo-token"
+}

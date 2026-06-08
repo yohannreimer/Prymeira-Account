@@ -1,0 +1,91 @@
+{
+  "pidFile": "demo/.demo-processes.json",
+  "services": [
+    {
+      "id": "account-api",
+      "name": "Account API demo",
+      "cwd": ".",
+      "command": "pnpm",
+      "args": ["dev:api"],
+      "ports": [3001],
+      "healthUrl": "http://localhost:3001/health",
+      "env": {
+        "DEMO_MODE": "true",
+        "PORT": "3001",
+        "CORS_ORIGINS": "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:5177,http://localhost:5178"
+      }
+    },
+    {
+      "id": "hub-web",
+      "name": "Hub web",
+      "cwd": ".",
+      "command": "pnpm",
+      "args": ["dev:hub"],
+      "ports": [5175],
+      "healthUrl": "http://localhost:5175",
+      "env": {
+        "VITE_DEMO_MODE": "true",
+        "VITE_PRYMEIRA_ACCOUNT_API_URL": "http://localhost:3001",
+        "VITE_PRODUCT_MEDIA_URL": "http://localhost:5177",
+        "VITE_PRODUCT_FINANCEIRO_URL": "http://localhost:5173/m/financeiro",
+        "VITE_PRODUCT_ORQUESTRADOR_URL": "http://localhost:5173/m/tecnico",
+        "VITE_PRODUCT_CRM_URL": "http://localhost:5174",
+        "VITE_PRODUCT_OPERIS_URL": "http://localhost:5178",
+        "VITE_PRODUCT_TALK_URL": "http://localhost:5176"
+      }
+    },
+    {
+      "id": "plataforma-modular",
+      "name": "Fluvia / Velio",
+      "cwd": "../Plataforma Modular",
+      "command": "npm",
+      "args": ["run", "demo:prymeira"],
+      "ports": [4000, 5173],
+      "healthUrl": "http://localhost:4000/health",
+      "resetCommand": "npm run demo:reset",
+      "env": {}
+    },
+    {
+      "id": "vincula-crm",
+      "name": "Vincula CRM",
+      "cwd": "../atomic-crm-main",
+      "command": "npm",
+      "args": ["run", "demo:prymeira"],
+      "ports": [5174],
+      "healthUrl": "http://localhost:5174",
+      "env": {}
+    },
+    {
+      "id": "talk",
+      "name": "Prymeira Talk",
+      "cwd": "../Wpp Interface prot",
+      "command": "pnpm",
+      "args": ["demo:prymeira"],
+      "ports": [3002, 5176],
+      "healthUrl": "http://localhost:3002/health",
+      "resetCommand": "pnpm demo:reset",
+      "env": {}
+    },
+    {
+      "id": "flowcut",
+      "name": "Flowcut",
+      "cwd": "../MediaFactory-SaaS",
+      "command": "npm",
+      "args": ["run", "demo:prymeira"],
+      "ports": [4317, 5177],
+      "healthUrl": "http://localhost:4317/health",
+      "env": {}
+    },
+    {
+      "id": "operis",
+      "name": "Operis",
+      "cwd": "../../operis-dev/operis",
+      "command": "npm",
+      "args": ["run", "demo:prymeira"],
+      "ports": [3000, 5178],
+      "healthUrl": "http://localhost:3000/health",
+      "resetCommand": "npm run demo:reset",
+      "env": {}
+    }
+  ]
+}
