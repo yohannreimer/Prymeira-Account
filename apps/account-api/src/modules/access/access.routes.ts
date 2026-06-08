@@ -1,7 +1,9 @@
 import type { PrismaClient } from "@prisma/client";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { isDemoMode, loadEnv } from "../../env.js";
 import { findCustomerByClerkUserId } from "../customers/customers.service.js";
+import { demoAccessDecision, demoProductsResponse } from "../demo/demo-fixtures.js";
 import { findProductByKey, listActiveProducts } from "../products/products.service.js";
 import { evaluateEntitlementAccess } from "./access.service.js";
 import type {
@@ -17,9 +19,16 @@ const accessCheckQuerySchema = z.object({
 });
 
 export const accessRoutes: FastifyPluginAsync = async (app) => {
+  const env = loadEnv();
+
   app.get("/access-check", async (request) => {
     const user = await app.authVerifier.verifyBearerToken(request.headers.authorization);
     const query = accessCheckQuerySchema.parse(request.query);
+
+    if (isDemoMode(env)) {
+      return demoAccessDecision(env, query.product_key);
+    }
+
     const customer = await findCustomerByClerkUserId(app.prisma, user.clerkUserId);
     const product = await findProductByKey(app.prisma, query.product_key);
     const workspaceContext = customer
@@ -64,6 +73,11 @@ export const accessRoutes: FastifyPluginAsync = async (app) => {
 
   app.get("/me/products", async (request) => {
     const user = await app.authVerifier.verifyBearerToken(request.headers.authorization);
+
+    if (isDemoMode(env)) {
+      return demoProductsResponse(env);
+    }
+
     const customer = await findCustomerByClerkUserId(app.prisma, user.clerkUserId);
     const products = await listActiveProducts(app.prisma);
     const workspaceContext = customer

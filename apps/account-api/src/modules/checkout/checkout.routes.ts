@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
-import { loadEnv } from "../../env.js";
+import { isDemoMode, loadEnv } from "../../env.js";
 import Stripe from "stripe";
 import { createCheckoutSession } from "./checkout.service.js";
 
@@ -16,6 +16,13 @@ export const checkoutRoutes: FastifyPluginAsync = async (app) => {
     const user = await app.authVerifier.verifyBearerToken(request.headers.authorization);
     const body = checkoutBodySchema.parse(request.body);
     const env = loadEnv();
+
+    if (isDemoMode(env)) {
+      const checkoutUrl = new URL(body.success_url);
+      checkoutUrl.searchParams.set("demo_checkout", "1");
+
+      return reply.status(200).send({ checkout_url: checkoutUrl.toString() });
+    }
 
     if (!env.STRIPE_SECRET_KEY) {
       return reply.status(503).send({
