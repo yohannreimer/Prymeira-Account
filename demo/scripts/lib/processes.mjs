@@ -85,6 +85,7 @@ export function startServices(services) {
       pid: child.pid,
       command: [service.command, ...service.args].join(" "),
       cwd: service.absoluteCwd,
+      absoluteCwd: service.absoluteCwd,
       healthUrl: service.healthUrl
     });
   }
@@ -103,7 +104,47 @@ export function readPidFile(pidFile) {
   return JSON.parse(fs.readFileSync(pidFile, "utf8"));
 }
 
-export function stopTrackedProcesses(pidFile) {
+function expectedCommand(service) {
+  return [service.command, ...service.args].join(" ");
+}
+
+function expectedCwd(service) {
+  return service.absoluteCwd ?? service.cwd;
+}
+
+function hasRequiredStopMetadata(entry) {
+  return (
+    Number.isInteger(entry.pid) &&
+    entry.pid > 1 &&
+    typeof entry.id === "string" &&
+    entry.id.trim() !== "" &&
+    typeof entry.name === "string" &&
+    entry.name.trim() !== "" &&
+    typeof entry.command === "string" &&
+    entry.command.trim() !== "" &&
+    (typeof entry.cwd === "string" || typeof entry.absoluteCwd === "string")
+  );
+}
+
+function isSafePidEntry(entry, services) {
+  if (!hasRequiredStopMetadata(entry)) {
+    return { ok: false, reason: `Skipping unsafe demo PID entry for ${entry.id ?? "unknown"}: missing or invalid metadata.` };
+  }
+
+  const service = services.find((candidate) => candidate.id === entry.id);
+  if (!service) {
+    return { ok: false, reason: `Skipping ${entry.id} (${entry.pid}): service is not in current demo config.` };
+  }
+
+  const storedCwd = entry.absoluteCwd ?? entry.cwd;
+  if (entry.name !== service.name || entry.command !== expectedCommand(service) || storedCwd !== expectedCwd(service)) {
+    return { ok: false, reason: `Skipping ${entry.id} (${entry.pid}): tracked metadata does not match current demo config.` };
+  }
+
+  return { ok: true };
+}
+
+export function stopTrackedProcesses(pidFile, services = [], { dryRun = false, killProcess = process.kill } = {}) {
   const pidData = readPidFile(pidFile);
   if (!pidData || !Array.isArray(pidData.processes) || pidData.processes.length === 0) {
     console.log("No tracked demo processes to stop.");
@@ -112,11 +153,19 @@ export function stopTrackedProcesses(pidFile) {
 
   const stopped = [];
   for (const entry of pidData.processes) {
-    if (!Number.isInteger(entry.pid)) {
+    const safety = isSafePidEntry(entry, services);
+    if (!safety.ok) {
+      console.warn(safety.reason);
       continue;
     }
+
+    if (dryRun) {
+      console.log(`[dry-run] Would stop ${entry.id} (${entry.pid}).`);
+      continue;
+    }
+
     try {
-      process.kill(entry.pid, "SIGTERM");
+      killProcess(entry.pid, "SIGTERM");
       stopped.push(entry);
       console.log(`Stopped ${entry.id} (${entry.pid}).`);
     } catch (error) {
@@ -126,6 +175,9 @@ export function stopTrackedProcesses(pidFile) {
         throw error;
       }
     }
+  }
+  if (dryRun) {
+    return stopped;
   }
   fs.rmSync(pidFile, { force: true });
   return stopped;
