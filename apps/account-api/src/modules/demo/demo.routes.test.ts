@@ -20,6 +20,27 @@ beforeEach(() => {
 });
 
 describe("demo account routes", () => {
+  it("starts without connecting to Prisma when no explicit client is provided", async () => {
+    process.env.DATABASE_URL = "postgresql://demo:demo@127.0.0.1:1/demo";
+    const app = await buildApp();
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/access-check?product_key=crm",
+      headers: demoHeaders
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      allowed: true,
+      product_key: "crm",
+      workspace_id: "demo_workspace",
+      reason: "demo_mode"
+    });
+
+    await app.close();
+  });
+
   it("allows demo access checks for crm", async () => {
     const app = await buildApp({ prisma });
 

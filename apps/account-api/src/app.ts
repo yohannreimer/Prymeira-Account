@@ -53,7 +53,11 @@ export async function buildApp(options: BuildAppOptions = {}) {
   });
   await app.register(
     prismaPlugin,
-    options.prisma ? { prisma: options.prisma, connect: false, disconnectOnClose: false } : {}
+    options.prisma
+      ? { prisma: options.prisma, connect: false, disconnectOnClose: false }
+      : isDemoMode(env)
+        ? { connect: false }
+        : {}
   );
 
   app.decorate("authVerifier", options.authVerifier ?? (isDemoMode(env) ? createDemoAuthVerifier(env) : createClerkAuthVerifier()));
