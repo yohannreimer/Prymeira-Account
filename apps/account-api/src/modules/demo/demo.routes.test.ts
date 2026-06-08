@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import { beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../../app.js";
+import { loadEnv } from "../../env.js";
 
 const demoHeaders = { authorization: "Bearer demo-token" };
 const prisma = {} as PrismaClient;
@@ -20,6 +21,26 @@ beforeEach(() => {
 });
 
 describe("demo account routes", () => {
+  it("rejects demo mode in production env", () => {
+    expect(() =>
+      loadEnv({
+        DATABASE_URL: "postgresql://example.test/account",
+        CLERK_SECRET_KEY: "clerk_secret",
+        NODE_ENV: "production",
+        DEMO_MODE: "true"
+      })
+    ).toThrow(/DEMO_MODE cannot be true when NODE_ENV is production/);
+
+    expect(
+      loadEnv({
+        DATABASE_URL: "postgresql://example.test/account",
+        CLERK_SECRET_KEY: "clerk_secret",
+        NODE_ENV: "production",
+        DEMO_MODE: "false"
+      }).DEMO_MODE
+    ).toBe("false");
+  });
+
   it("starts without connecting to Prisma when no explicit client is provided", async () => {
     process.env.DATABASE_URL = "postgresql://demo:demo@127.0.0.1:1/demo";
     const app = await buildApp();

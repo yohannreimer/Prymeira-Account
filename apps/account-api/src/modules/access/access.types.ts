@@ -13,7 +13,8 @@ export type AccessReason =
   | "cancelled"
   | "trial_expired"
   | "active_entitlement"
-  | "internal_access";
+  | "internal_access"
+  | "demo_mode";
 
 export type AccessProduct = {
   productKey: string;

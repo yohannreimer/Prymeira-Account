@@ -1,4 +1,5 @@
 import type { Env } from "../../env.js";
+import type { AccessDecision } from "../access/access.types.js";
 
 export const demoProducts = [
   {
@@ -63,7 +64,7 @@ export function demoWorkspace(env: Env) {
   };
 }
 
-export function demoAccessDecision(env: Env, productKey: string) {
+export function demoAccessDecision(env: Env, productKey: string): AccessDecision {
   const product = demoProducts.find((item) => item.product_key === productKey);
 
   return {
