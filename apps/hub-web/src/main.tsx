@@ -20,8 +20,9 @@ if (!root) {
 }
 
 const rootRenderer = createRoot(root);
+const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
 
-if (shouldRenderPublicLanding(window.location)) {
+if (shouldRenderPublicLanding(window.location) || isDemoMode) {
   rootRenderer.render(<App />);
 } else {
   void loadClerkPublishableKey().then((publishableKey) => {
