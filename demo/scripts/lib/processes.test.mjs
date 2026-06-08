@@ -124,8 +124,9 @@ test("stopTrackedProcesses skips invalid pid values", () => {
 
   let killCalled = false;
   const stopped = stopTrackedProcesses(pidFile, [service], {
-    killProcess: () => {
+    killProcess: (pid) => {
       killCalled = true;
+      assert.equal(pid, -12345);
     }
   });
 
@@ -177,7 +178,7 @@ test("stopTrackedProcesses stops a valid tracked disposable process", async () =
   const tempDir = mkdtempSync(path.join(tmpdir(), "prymeira-demo-"));
   const pidFile = path.join(tempDir, "demo-processes.json");
   const args = ["-e", "setInterval(() => {}, 1000);"];
-  const child = spawn(process.execPath, args, { cwd: tempDir, stdio: "ignore" });
+  const child = spawn(process.execPath, args, { cwd: tempDir, detached: true, stdio: "ignore" });
   const exited = new Promise((resolve) => child.once("exit", resolve));
   const service = {
     id: "one",
@@ -215,7 +216,7 @@ test("stopTrackedProcesses stops a valid tracked disposable process", async () =
     assert.notEqual(exitCode, undefined);
   } finally {
     try {
-      process.kill(child.pid, "SIGKILL");
+      process.kill(-child.pid, "SIGKILL");
     } catch (error) {
       if (error.code !== "ESRCH") {
         throw error;

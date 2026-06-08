@@ -165,7 +165,7 @@ export function stopTrackedProcesses(pidFile, services = [], { dryRun = false, k
     }
 
     try {
-      killProcess(entry.pid, "SIGTERM");
+      killProcess(-entry.pid, "SIGTERM");
       stopped.push(entry);
       console.log(`Stopped ${entry.id} (${entry.pid}).`);
     } catch (error) {

@@ -73,7 +73,7 @@
       "command": "npm",
       "args": ["run", "demo:prymeira"],
       "ports": [4317, 5177],
-      "healthUrl": "http://localhost:4317/health",
+      "healthUrl": "http://localhost:4317/api/health",
       "env": {}
     },
     {
