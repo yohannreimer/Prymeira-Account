@@ -7,6 +7,7 @@ describe("mock Clerk demo auth", () => {
     const { user } = useUser();
 
     await expect(auth.getToken()).resolves.toBe("demo-token");
+    expect(useAuth().getToken).toBe(auth.getToken);
     expect(auth.isLoaded).toBe(true);
     expect(auth.isSignedIn).toBe(true);
     expect(user.id).toBe("demo_user");

@@ -10,6 +10,20 @@ const demoUser = {
   }
 };
 
+const demoAuth = {
+  isLoaded: true,
+  isSignedIn: true,
+  userId: demoUser.id,
+  getToken: async () => "demo-token",
+  signOut: async () => undefined
+};
+
+const demoUserState = {
+  isLoaded: true,
+  isSignedIn: true,
+  user: demoUser
+};
+
 type ChildrenProps = {
   children?: ReactNode;
 };
@@ -43,19 +57,9 @@ export function UserButton() {
 }
 
 export function useAuth() {
-  return {
-    isLoaded: true,
-    isSignedIn: true,
-    userId: demoUser.id,
-    getToken: async () => "demo-token",
-    signOut: async () => undefined
-  };
+  return demoAuth;
 }
 
 export function useUser() {
-  return {
-    isLoaded: true,
-    isSignedIn: true,
-    user: demoUser
-  };
+  return demoUserState;
 }
