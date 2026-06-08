@@ -96,6 +96,7 @@ Operações WhatsApp para empresas que atendem em escala. Inbox unificado de con
 |---|---|
 | [CHECKLIST.md](./CHECKLIST.md) | Status de cada padrão por app — o que falta em cada um |
 | [NOVO-APP.md](./NOVO-APP.md) | Guia completo para criar um novo app do zero |
+| [local-demo.md](./local-demo.md) | Como rodar a demo integrada local com todos os apps |
 
 ---
 
