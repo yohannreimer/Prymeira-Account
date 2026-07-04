@@ -42,6 +42,24 @@ export async function syncCustomer(
   return { customer, workspaceContext };
 }
 
+export async function ensureCustomerForAuthenticatedUser(
+  prisma: PrismaClient,
+  user: AuthenticatedUser
+) {
+  const existingCustomer = await findCustomerByClerkUserId(prisma, user.clerkUserId);
+  if (existingCustomer) {
+    return { customer: existingCustomer };
+  }
+
+  const input = {
+    clerk_user_id: user.clerkUserId,
+    email: user.email,
+    ...(user.name ? { name: user.name } : {})
+  };
+
+  return syncCustomer(prisma, user, input);
+}
+
 export async function findCustomerByClerkUserId(prisma: PrismaClient, clerkUserId: string) {
   return prisma.customer.findUnique({
     where: { clerkUserId }
