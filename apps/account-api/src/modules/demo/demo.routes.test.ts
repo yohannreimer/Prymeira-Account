@@ -26,6 +26,8 @@ describe("demo account routes", () => {
       loadEnv({
         DATABASE_URL: "postgresql://example.test/account",
         CLERK_SECRET_KEY: "clerk_secret",
+        ADMIN_ACTION_TOKEN: "confirm-admin",
+        CORS_ORIGINS: "https://hub.prymeiradigital.com.br",
         NODE_ENV: "production",
         DEMO_MODE: "true"
       })
@@ -35,6 +37,8 @@ describe("demo account routes", () => {
       loadEnv({
         DATABASE_URL: "postgresql://example.test/account",
         CLERK_SECRET_KEY: "clerk_secret",
+        ADMIN_ACTION_TOKEN: "confirm-admin",
+        CORS_ORIGINS: "https://hub.prymeiradigital.com.br",
         NODE_ENV: "production",
         DEMO_MODE: "false"
       }).DEMO_MODE

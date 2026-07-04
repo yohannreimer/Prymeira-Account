@@ -16,13 +16,15 @@
     "grant:product-access": "tsx src/scripts/grant-product-access.ts"
   },
   "dependencies": {
-    "@clerk/backend": "^1.34.0",
+    "@clerk/backend": "^3.10.0",
     "@fastify/cors": "^11.0.1",
+    "@fastify/rate-limit": "^11.1.0",
     "@prisma/client": "^6.8.2",
     "dotenv": "^17.4.2",
     "fastify": "^5.3.3",
     "fastify-plugin": "^5.0.1",
     "stripe": "^22.1.1",
+    "svix": "^1.65.0",
     "zod": "^3.24.4"
   },
   "devDependencies": {

@@ -23,6 +23,8 @@ CLERK_PUBLISHABLE_KEY=pk_test_ou_pk_live
 VITE_CLERK_PUBLISHABLE_KEY=pk_test_ou_pk_live
 ADMIN_EMAILS=yohannreimer20@gmail.com
 ADMIN_ACTION_TOKEN=uma_senha_extra_forte_para_acoes_admin
+RATE_LIMIT_MAX=300
+RATE_LIMIT_TIME_WINDOW=1 minute
 STRIPE_SECRET_KEY=sk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRICE_START_MONTHLY=price_...
@@ -59,6 +61,7 @@ O Hub recebe a publishable key em runtime pelo Portainer. Use o mesmo valor `pk_
 Se `STRIPE_SECRET_KEY` nao estiver configurada no stack, a API responde `Checkout is not configured.` ao clicar em assinar.
 
 Configure o webhook do Stripe em `https://hub.prymeiradigital.com.br/api/webhook/stripe`
+Configure o webhook do Clerk em `https://hub.prymeiradigital.com.br/api/webhook/clerk`
 com estes eventos:
 
 ```txt

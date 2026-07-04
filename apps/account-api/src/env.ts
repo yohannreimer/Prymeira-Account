@@ -8,9 +8,12 @@ const envSchema = z
     DATABASE_URL: z.string().min(1),
     CLERK_SECRET_KEY: z.string().min(1),
     CLERK_PUBLISHABLE_KEY: z.string().min(1).optional(),
+    CLERK_WEBHOOK_SIGNING_SECRET: z.string().default(""),
     ADMIN_EMAILS: z.string().default(""),
     ADMIN_ACTION_TOKEN: z.string().default(""),
     CORS_ORIGINS: z.string().default(""),
+    RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
+    RATE_LIMIT_TIME_WINDOW: z.string().min(1).default("1 minute"),
     PORT: z.coerce.number().int().positive().max(65535).default(3001),
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
     STRIPE_SECRET_KEY: z.string().default(""),
@@ -41,6 +44,22 @@ const envSchema = z
         code: z.ZodIssueCode.custom,
         path: ["DEMO_MODE"],
         message: "DEMO_MODE cannot be true when NODE_ENV is production."
+      });
+    }
+
+    if (env.NODE_ENV === "production" && !env.CORS_ORIGINS.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["CORS_ORIGINS"],
+        message: "CORS_ORIGINS must be configured when NODE_ENV is production."
+      });
+    }
+
+    if (env.NODE_ENV === "production" && !env.ADMIN_ACTION_TOKEN.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["ADMIN_ACTION_TOKEN"],
+        message: "ADMIN_ACTION_TOKEN must be configured when NODE_ENV is production."
       });
     }
   });

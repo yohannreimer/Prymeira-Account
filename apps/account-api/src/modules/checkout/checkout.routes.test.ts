@@ -17,7 +17,18 @@ const authVerifier = {
   }
 };
 
-const prisma = {} as unknown as PrismaClient;
+const prisma = {
+  customer: {
+    findUnique() {
+      return {
+        id: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0",
+        clerkUserId: "user_123",
+        email: "user@example.com",
+        name: null
+      };
+    }
+  }
+} as unknown as PrismaClient;
 
 beforeEach(() => {
   process.env.DATABASE_URL = "postgresql://example.test/account";
@@ -38,8 +49,8 @@ describe("checkoutRoutes", () => {
       payload: {
         plan_id: "start",
         billing: "monthly",
-        success_url: "https://hub.prymeira.com/planos?success=1",
-        cancel_url: "https://hub.prymeira.com/planos"
+        success_url: "https://hub.prymeiradigital.com.br/planos?success=1",
+        cancel_url: "https://hub.prymeiradigital.com.br/planos"
       }
     });
 
@@ -72,8 +83,8 @@ describe("checkoutRoutes", () => {
       payload: {
         plan_id: "start",
         billing: "monthly",
-        success_url: "https://hub.prymeira.com/planos?success=1",
-        cancel_url: "https://hub.prymeira.com/planos"
+        success_url: "https://hub.prymeiradigital.com.br/planos?success=1",
+        cancel_url: "https://hub.prymeiradigital.com.br/planos"
       }
     });
 
@@ -98,8 +109,8 @@ describe("checkoutRoutes", () => {
       payload: {
         plan_id: "start",
         billing: "monthly",
-        success_url: "https://hub.prymeira.com/planos?success=1",
-        cancel_url: "https://hub.prymeira.com/planos"
+        success_url: "https://hub.prymeiradigital.com.br/planos?success=1",
+        cancel_url: "https://hub.prymeiradigital.com.br/planos"
       }
     });
 
@@ -116,6 +127,95 @@ describe("checkoutRoutes", () => {
         clerkUserId: "user_123"
       })
     );
+    await app.close();
+  });
+
+  it("rejects checkout redirects outside Prymeira and local development hosts", async () => {
+    const app = await buildApp({ authVerifier, prisma });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/checkout",
+      headers: { authorization: "Bearer token" },
+      payload: {
+        plan_id: "start",
+        billing: "monthly",
+        success_url: "https://evil.example/steal",
+        cancel_url: "https://hub.prymeiradigital.com.br/planos"
+      }
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({
+      error: { code: "VALIDATION_ERROR" }
+    });
+    expect(checkoutService.createCheckoutSession).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it("syncs the authenticated customer before creating a checkout session", async () => {
+    vi.mocked(checkoutService.createCheckoutSession).mockResolvedValue({
+      checkoutUrl: "https://checkout.stripe.com/pay/cs_test_abc"
+    });
+    const customer = {
+      id: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0",
+      clerkUserId: "user_123",
+      email: "user@example.com",
+      name: null
+    };
+    const calls: { customerUpsert?: unknown } = {};
+    const prismaWithCustomerSync = {
+      customer: {
+        findUnique() {
+          return null;
+        },
+        upsert(args: unknown) {
+          calls.customerUpsert = args;
+          return customer;
+        }
+      },
+      workspaceMember: {
+        findFirst() {
+          return {
+            id: "member_123",
+            customerId: customer.id,
+            workspaceId: "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4",
+            role: "owner",
+            status: "active",
+            workspace: {
+              id: "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4",
+              name: "User",
+              type: "individual",
+              status: "active"
+            }
+          };
+        }
+      }
+    } as unknown as PrismaClient;
+    const app = await buildApp({ authVerifier, prisma: prismaWithCustomerSync });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/checkout",
+      headers: { authorization: "Bearer token" },
+      payload: {
+        plan_id: "start",
+        billing: "monthly",
+        success_url: "https://hub.prymeiradigital.com.br/planos?success=1",
+        cancel_url: "https://hub.prymeiradigital.com.br/planos"
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(calls.customerUpsert).toMatchObject({
+      where: { clerkUserId: "user_123" },
+      update: { email: "user@example.com" },
+      create: {
+        clerkUserId: "user_123",
+        email: "user@example.com",
+        name: null
+      }
+    });
     await app.close();
   });
 });

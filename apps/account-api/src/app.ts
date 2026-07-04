@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
 import type { PrismaClient } from "@prisma/client";
 import { ZodError } from "zod";
 import { isDemoMode, loadEnv } from "./env.js";
@@ -36,6 +37,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
   );
 
   const app = Fastify({
+    trustProxy: true,
     logger: {
       level: process.env.NODE_ENV === "test" ? "silent" : "info"
     }
@@ -48,7 +50,17 @@ export async function buildApp(options: BuildAppOptions = {}) {
         return;
       }
 
-      callback(new Error("Origin is not allowed by CORS"), false);
+      callback(null, false);
+    }
+  });
+  await app.register(rateLimit, {
+    global: true,
+    max: env.RATE_LIMIT_MAX,
+    timeWindow: env.RATE_LIMIT_TIME_WINDOW,
+    errorResponseBuilder(_request, context) {
+      const error = new Error(`Too many requests. Try again in ${context.after}.`);
+      (error as Error & { statusCode: number }).statusCode = context.statusCode;
+      return error;
     }
   });
   await app.register(
@@ -72,6 +84,16 @@ export async function buildApp(options: BuildAppOptions = {}) {
         error: {
           code: "VALIDATION_ERROR",
           message: error.issues.map((issue) => issue.message).join("; ")
+        }
+      });
+    }
+
+    const maybeHttpError = error as Error & { statusCode?: number };
+    if (maybeHttpError.statusCode === 429) {
+      return reply.status(429).send({
+        error: {
+          code: "RATE_LIMITED",
+          message: maybeHttpError.message
         }
       });
     }
