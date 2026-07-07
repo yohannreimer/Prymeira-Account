@@ -48,6 +48,7 @@ export async function ensureCustomerForAuthenticatedUser(
 ) {
   const existingCustomer = await findCustomerByClerkUserId(prisma, user.clerkUserId);
   if (existingCustomer) {
+    await acceptPendingInvitationsForCustomer(prisma, existingCustomer);
     return { customer: existingCustomer };
   }
 
