@@ -16,11 +16,23 @@ beforeEach(() => {
 });
 
 describe("accessRoutes", () => {
-  it("denies access when the authenticated user has no customer", async () => {
+  it("syncs an authenticated user before checking access when no customer exists yet", async () => {
+    const customer = {
+      id: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0",
+      clerkUserId: "user_123",
+      email: "user@example.com",
+      name: null
+    };
+    const workspaceId = "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4";
+    const calls: { customerUpsert?: unknown } = {};
     const prisma = {
       customer: {
         findUnique() {
           return null;
+        },
+        upsert(args: unknown) {
+          calls.customerUpsert = args;
+          return customer;
         }
       },
       product: {
@@ -32,14 +44,29 @@ describe("accessRoutes", () => {
           };
         }
       },
-      entitlement: {
-        findUnique() {
-          throw new Error("entitlement lookup should not run without a customer");
-        }
-      },
       workspaceMember: {
         findFirst() {
-          throw new Error("workspace lookup should not run without a customer");
+          return {
+            workspaceId,
+            role: "owner",
+            status: "active",
+            workspace: {
+              id: workspaceId,
+              name: "User Workspace",
+              type: "individual",
+              status: "active"
+            }
+          };
+        }
+      },
+      entitlement: {
+        findUnique() {
+          return null;
+        }
+      },
+      workspaceProductMember: {
+        findUnique() {
+          return null;
         }
       }
     } as unknown as PrismaClient;
@@ -52,10 +79,19 @@ describe("accessRoutes", () => {
     });
 
     expect(response.statusCode).toBe(200);
+    expect(calls.customerUpsert).toMatchObject({
+      where: { clerkUserId: "user_123" },
+      update: { email: "user@example.com" },
+      create: {
+        clerkUserId: "user_123",
+        email: "user@example.com",
+        name: null
+      }
+    });
     expect(response.json()).toMatchObject({
       allowed: false,
       product_key: "operis",
-      reason: "no_customer"
+      reason: "no_product_seat"
     });
 
     await app.close();
@@ -480,7 +516,15 @@ describe("accessRoutes", () => {
       name: "User"
     };
     const workspaceId = "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4";
-    const calls: { entitlementFindMany?: unknown; workspaceProductMemberFindMany?: unknown } = {};
+    const calls: {
+      entitlementFindUnique: unknown[];
+      workspaceProductMemberFindFirst: unknown[];
+      workspaceProductMemberFindUnique: unknown[];
+    } = {
+      entitlementFindUnique: [],
+      workspaceProductMemberFindFirst: [],
+      workspaceProductMemberFindUnique: []
+    };
     const prisma = {
       customer: {
         findUnique() {
@@ -525,50 +569,41 @@ describe("accessRoutes", () => {
         }
       },
       entitlement: {
-        findMany(args: unknown) {
-          calls.entitlementFindMany = args;
-          return [
-            {
-              workspaceId,
-              customerId: null,
-              productKey: "financeiro",
-              status: "active",
-              plan: "pro",
-              source: "admin",
-              seatsLimit: 2,
-              endsAt: null,
-              trialEndsAt: null,
-              currentPeriodEndsAt: null,
-              limits: {}
-            },
-            {
-              workspaceId,
-              customerId: null,
-              productKey: "orquestrador",
-              status: "active",
-              plan: "pro",
-              source: "admin",
-              seatsLimit: 2,
-              endsAt: null,
-              trialEndsAt: null,
-              currentPeriodEndsAt: null,
-              limits: {}
-            }
-          ];
+        findUnique(args: { where: { workspaceId_productKey: { productKey: string } } }) {
+          calls.entitlementFindUnique.push(args);
+          return {
+            workspaceId,
+            customerId: null,
+            productKey: args.where.workspaceId_productKey.productKey,
+            status: "active",
+            plan: "pro",
+            source: "admin",
+            seatsLimit: 2,
+            endsAt: null,
+            trialEndsAt: null,
+            currentPeriodEndsAt: null,
+            limits: {}
+          };
         }
       },
       workspaceProductMember: {
-        findMany(args: unknown) {
-          calls.workspaceProductMemberFindMany = args;
-          return [
-            {
+        findFirst(args: unknown) {
+          calls.workspaceProductMemberFindFirst.push(args);
+          return null;
+        },
+        findUnique(args: { where: { workspaceId_customerId_productKey: { productKey: string } } }) {
+          calls.workspaceProductMemberFindUnique.push(args);
+          if (args.where.workspaceId_customerId_productKey.productKey === "financeiro") {
+            return {
               workspaceId,
               customerId: customer.id,
               productKey: "financeiro",
               role: "admin",
               status: "active"
-            }
-          ];
+            };
+          }
+
+          return null;
         }
       }
     } as unknown as PrismaClient;
@@ -581,16 +616,8 @@ describe("accessRoutes", () => {
     });
 
     expect(response.statusCode).toBe(200);
-    expect(calls.entitlementFindMany).toMatchObject({
-      where: { workspaceId }
-    });
-    expect(calls.workspaceProductMemberFindMany).toMatchObject({
-      where: {
-        workspaceId,
-        customerId: customer.id,
-        productKey: { in: ["financeiro", "orquestrador"] }
-      }
-    });
+    expect(calls.entitlementFindUnique).toHaveLength(2);
+    expect(calls.workspaceProductMemberFindUnique).toHaveLength(2);
     expect(response.json()).toMatchObject({
       workspace: {
         id: workspaceId,
@@ -615,6 +642,129 @@ describe("accessRoutes", () => {
           allowed: false,
           status: "locked",
           reason: "no_product_seat"
+        }
+      ]
+    });
+
+    await app.close();
+  });
+
+  it("uses the invited product workspace when listing Hub products", async () => {
+    const customer = {
+      id: "9f7dd4f9-cf5f-4f9a-8366-7c4b9cfd79b0",
+      email: "user@example.com",
+      name: "User"
+    };
+    const individualWorkspaceId = "c6fcda6d-c60b-4cf7-8548-9230fed8d8b4";
+    const teamWorkspaceId = "c6fcda6d-c60b-4cf7-8548-9230fed8d8b5";
+    const prisma = {
+      customer: {
+        findUnique() {
+          return customer;
+        }
+      },
+      product: {
+        findMany() {
+          return [
+            {
+              productKey: "talk",
+              name: "Talk",
+              description: "Atendimento.",
+              appUrl: "https://talk.example",
+              marketingUrl: "https://talk.example/upgrade",
+              status: "active"
+            }
+          ];
+        }
+      },
+      workspaceMember: {
+        findFirst() {
+          return {
+            workspaceId: individualWorkspaceId,
+            role: "owner",
+            status: "active",
+            workspace: {
+              id: individualWorkspaceId,
+              name: "Workspace Individual",
+              type: "individual",
+              status: "active"
+            }
+          };
+        },
+        findUnique() {
+          return {
+            workspaceId: teamWorkspaceId,
+            role: "member",
+            status: "active",
+            workspace: {
+              id: teamWorkspaceId,
+              name: "Prymeira SaaS",
+              type: "company",
+              status: "active"
+            }
+          };
+        }
+      },
+      entitlement: {
+        findUnique() {
+          return {
+            workspaceId: teamWorkspaceId,
+            customerId: null,
+            productKey: "talk",
+            status: "active",
+            plan: "pro",
+            source: "admin",
+            seatsLimit: 5,
+            endsAt: null,
+            trialEndsAt: null,
+            currentPeriodEndsAt: null,
+            limits: {}
+          };
+        }
+      },
+      workspaceProductMember: {
+        findFirst() {
+          return {
+            workspaceId: teamWorkspaceId,
+            customerId: customer.id,
+            productKey: "talk",
+            role: "member",
+            status: "active"
+          };
+        },
+        findUnique() {
+          return {
+            workspaceId: teamWorkspaceId,
+            customerId: customer.id,
+            productKey: "talk",
+            role: "member",
+            status: "active"
+          };
+        }
+      }
+    } as unknown as PrismaClient;
+    const app = await buildApp({ authVerifier, prisma });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/me/products",
+      headers: { authorization: "Bearer token" }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      workspace: {
+        id: teamWorkspaceId,
+        name: "Prymeira SaaS",
+        role: "member"
+      },
+      products: [
+        {
+          product_key: "talk",
+          allowed: true,
+          workspace_id: teamWorkspaceId,
+          workspace_role: "member",
+          product_role: "member"
         }
       ]
     });

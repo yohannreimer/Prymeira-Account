@@ -2,7 +2,7 @@ import type { PrismaClient } from "@prisma/client";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { isDemoMode, loadEnv } from "../../env.js";
-import { findCustomerByClerkUserId } from "../customers/customers.service.js";
+import { ensureCustomerForAuthenticatedUser } from "../customers/customers.service.js";
 import { demoAccessDecision, demoProductsResponse } from "../demo/demo-fixtures.js";
 import { findProductByKey, listActiveProducts } from "../products/products.service.js";
 import { evaluateEntitlementAccess } from "./access.service.js";
@@ -29,11 +29,9 @@ export const accessRoutes: FastifyPluginAsync = async (app) => {
       return demoAccessDecision(env, query.product_key);
     }
 
-    const customer = await findCustomerByClerkUserId(app.prisma, user.clerkUserId);
+    const { customer } = await ensureCustomerForAuthenticatedUser(app.prisma, user);
     const product = await findProductByKey(app.prisma, query.product_key);
-    const workspaceContext = customer
-      ? await findAccessWorkspaceMembership(app.prisma, customer.id, query.product_key)
-      : { membership: null, missingReason: "no_workspace" as const };
+    const workspaceContext = await findAccessWorkspaceMembership(app.prisma, customer.id, query.product_key);
     const activeWorkspaceId =
       workspaceContext.membership?.status === "active" && workspaceContext.membership.workspace.status === "active"
         ? workspaceContext.membership.workspaceId
@@ -78,56 +76,73 @@ export const accessRoutes: FastifyPluginAsync = async (app) => {
       return demoProductsResponse(env);
     }
 
-    const customer = await findCustomerByClerkUserId(app.prisma, user.clerkUserId);
+    const { customer } = await ensureCustomerForAuthenticatedUser(app.prisma, user);
     const products = await listActiveProducts(app.prisma);
-    const workspaceContext = customer
-      ? await findAccessWorkspaceMembership(app.prisma, customer.id)
-      : { membership: null, missingReason: "no_workspace" as const };
-    const activeWorkspaceId =
-      workspaceContext.membership?.status === "active" && workspaceContext.membership.workspace.status === "active"
-        ? workspaceContext.membership.workspaceId
-        : null;
-    const entitlements = activeWorkspaceId
-      ? await app.prisma.entitlement.findMany({
-          where: { workspaceId: activeWorkspaceId }
-        })
-      : [];
-    const productSeats = activeWorkspaceId
-      ? await app.prisma.workspaceProductMember.findMany({
-          where: {
-            workspaceId: activeWorkspaceId,
-            customerId: customer!.id,
-            productKey: { in: products.map((product) => product.productKey) }
-          }
-        })
-      : [];
+    const workspaceContext = await findAccessWorkspaceMembership(app.prisma, customer.id);
     const now = new Date();
-
-    return {
-      customer: customer
-        ? { id: customer.id, email: customer.email, name: customer.name }
-        : null,
-      workspace: workspaceContext.membership
-        ? {
-            id: workspaceContext.membership.workspace.id,
-            name: workspaceContext.membership.workspace.name,
-            type: workspaceContext.membership.workspace.type,
-            role: workspaceContext.membership.role
-          }
-        : null,
-      products: products.map((product) => {
-        const entitlement = entitlements.find((item) => item.productKey === product.productKey);
-        const productSeat = productSeats.find((item) => item.productKey === product.productKey);
+    const productViews = await Promise.all(
+      products.map(async (product) => {
+        const productWorkspaceContext = await findAccessWorkspaceMembership(
+          app.prisma,
+          customer.id,
+          product.productKey
+        );
+        const activeWorkspaceId =
+          productWorkspaceContext.membership?.status === "active" &&
+          productWorkspaceContext.membership.workspace.status === "active"
+            ? productWorkspaceContext.membership.workspaceId
+            : null;
+        const [entitlement, productSeat] = activeWorkspaceId
+          ? await Promise.all([
+              app.prisma.entitlement.findUnique({
+                where: {
+                  workspaceId_productKey: {
+                    workspaceId: activeWorkspaceId,
+                    productKey: product.productKey
+                  }
+                }
+              }),
+              app.prisma.workspaceProductMember.findUnique({
+                where: {
+                  workspaceId_customerId_productKey: {
+                    workspaceId: activeWorkspaceId,
+                    customerId: customer!.id,
+                    productKey: product.productKey
+                  }
+                }
+              })
+            ])
+          : [null, null];
         const decision = evaluateEntitlementAccess({
           hasCustomer: Boolean(customer),
-          workspace: workspaceContext.membership ? toAccessWorkspace(workspaceContext.membership) : null,
-          workspaceMissingReason: workspaceContext.missingReason,
+          workspace: productWorkspaceContext.membership ? toAccessWorkspace(productWorkspaceContext.membership) : null,
+          workspaceMissingReason: productWorkspaceContext.missingReason,
           productSeat: productSeat ? toAccessProductSeat(productSeat) : null,
           product: toAccessProduct(product),
           entitlement: entitlement ? toAccessEntitlement(entitlement) : null,
           now
         });
 
+        return { decision, product, workspaceContext: productWorkspaceContext };
+      })
+    );
+    const primaryMembership =
+      productViews.find((item) => item.decision.allowed && item.workspaceContext.membership)?.workspaceContext.membership ??
+      workspaceContext.membership;
+
+    return {
+      customer: customer
+        ? { id: customer.id, email: customer.email, name: customer.name }
+        : null,
+      workspace: primaryMembership
+        ? {
+            id: primaryMembership.workspace.id,
+            name: primaryMembership.workspace.name,
+            type: primaryMembership.workspace.type,
+            role: primaryMembership.role
+          }
+        : null,
+      products: productViews.map(({ decision, product }) => {
         return {
           product_key: product.productKey,
           name: product.name,
