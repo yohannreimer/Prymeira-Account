@@ -221,6 +221,19 @@ export function AdminPanel() {
     () => selectedWorkspace(customer, selectedWorkspaceId),
     [customer, selectedWorkspaceId],
   );
+  const customerProductSeatByKey = useMemo(() => {
+    const seats = new Map<string, AdminWorkspace["productMembers"][number]>();
+
+    if (!customer || !workspace) return seats;
+
+    for (const member of workspace.productMembers) {
+      if (member.customerId === customer.id) {
+        seats.set(member.productKey, member);
+      }
+    }
+
+    return seats;
+  }, [customer, workspace]);
   const productNameByKey = useMemo(
     () => new Map(products.map((product) => [product.productKey, product.name])),
     [products],
@@ -592,55 +605,70 @@ export function AdminPanel() {
                 </div>
               )}
 
-              {/* Entitlements */}
+              {/* Product access */}
               {workspace && workspace.entitlements.length > 0 && (
                 <div>
-                  <div className="admin-sec-title">Produtos e permissões</div>
+                  <div className="admin-sec-title">Produtos e acesso do cliente</div>
                   <table className="admin-table">
                     <thead>
                       <tr>
                         <th>Produto</th>
-                        <th>Status</th>
+                        <th>Workspace</th>
+                        <th>Cliente</th>
                         <th>Plano</th>
                         <th>Expira</th>
                         <th />
                       </tr>
                     </thead>
                     <tbody>
-                      {workspace.entitlements.map((ent) => (
-                        <tr key={ent.id}>
-                          <td>
-                            <div className="admin-ent-cell">
-                              <div className="admin-ent-icon">
-                                <KeyRound size={13} aria-hidden="true" />
+                      {workspace.entitlements.map((ent) => {
+                        const productSeat = customerProductSeatByKey.get(ent.productKey);
+                        const customerHasAccess = productSeat?.status === "active";
+
+                        return (
+                          <tr key={ent.id}>
+                            <td>
+                              <div className="admin-ent-cell">
+                                <div className="admin-ent-icon">
+                                  <KeyRound size={13} aria-hidden="true" />
+                                </div>
+                                <span className="admin-ent-name">{productLabel(ent.productKey)}</span>
                               </div>
-                              <span className="admin-ent-name">{productLabel(ent.productKey)}</span>
-                            </div>
-                          </td>
-                          <td>
-                            <span className={`status-pill status-pill--${ent.status}`}>
-                              {formatStatusLabel(ent.status)}
-                            </span>
-                          </td>
-                          <td style={{ color: "var(--dim)", fontSize: 12 }}>
-                            {formatPlanLabel(ent.plan)}
-                          </td>
-                          <td style={{ color: "var(--muted)", fontSize: 11 }}>
-                            {formatDate(ent.trialEndsAt ?? ent.endsAt ?? ent.currentPeriodEndsAt)}
-                          </td>
-                          <td>
-                            <button
-                              className="topbar__icon-btn"
-                              type="button"
-                              onClick={() => void blockProduct(ent)}
-                              aria-label={`Bloquear ${ent.productKey}`}
-                              style={{ width: 28, height: 28 }}
-                            >
-                              <Ban size={13} aria-hidden="true" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                            <td>
+                              <span className={`status-pill status-pill--${ent.status}`}>
+                                {formatStatusLabel(ent.status)}
+                              </span>
+                            </td>
+                            <td>
+                              {customerHasAccess ? (
+                                <span className="status-pill status-pill--active">
+                                  {formatRoleLabel(productSeat.role)}
+                                </span>
+                              ) : (
+                                <span className="status-pill status-pill--muted">Sem acesso</span>
+                              )}
+                            </td>
+                            <td style={{ color: "var(--dim)", fontSize: 12 }}>
+                              {formatPlanLabel(ent.plan)}
+                            </td>
+                            <td style={{ color: "var(--muted)", fontSize: 11 }}>
+                              {formatDate(ent.trialEndsAt ?? ent.endsAt ?? ent.currentPeriodEndsAt)}
+                            </td>
+                            <td>
+                              <button
+                                className="topbar__icon-btn"
+                                type="button"
+                                onClick={() => void blockProduct(ent)}
+                                aria-label={`Bloquear ${ent.productKey}`}
+                                style={{ width: 28, height: 28 }}
+                              >
+                                <Ban size={13} aria-hidden="true" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

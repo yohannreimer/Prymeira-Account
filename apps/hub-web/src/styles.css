@@ -1206,6 +1206,7 @@ img { display: block; max-width: 100%; }
 .status-pill--blocked,
 .status-pill--cancelled,
 .status-pill--expired  { background: var(--red-s); color: var(--red); }
+.status-pill--muted    { background: var(--surface); color: var(--muted); border: 1px solid var(--rule); }
 
 /* Audit log */
 .admin-log { display: flex; flex-direction: column; }
