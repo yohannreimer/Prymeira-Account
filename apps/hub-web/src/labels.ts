@@ -46,6 +46,7 @@ const workspaceTypeLabels: Record<string, string> = {
 };
 
 const productLabels: Record<string, string> = {
+  base: "Baase",
   operis: "Operis",
   orquestrador: "Velio",
   financeiro: "Fluvia",

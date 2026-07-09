@@ -9,6 +9,13 @@ const prisma = new PrismaClient();
 
 const products = [
   {
+    productKey: "base",
+    name: "Baase",
+    description: "Base operacional para organizar áreas, cargos, processos, rotinas, treinamentos e a execução diária da empresa.",
+    appUrl: "https://baase.prymeiradigital.com.br",
+    marketingUrl: "https://prymeiradigital.com.br/baase"
+  },
+  {
     productKey: "operis",
     name: "Operis",
     description: "O sistema operacional para quem executa com disciplina. Planejamento diário em blocos de tempo, rituais semanais de revisão estratégica, acompanhamento de hábitos com gamificação e check-ins via WhatsApp — tudo em um lugar para transformar intenção em resultado mensurável.",

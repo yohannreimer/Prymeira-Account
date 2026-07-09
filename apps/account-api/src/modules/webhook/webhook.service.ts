@@ -7,7 +7,8 @@ const PLAN_PRODUCT_KEYS: Record<string, string[]> = {
   start:        ["talk", "crm"],
   empresa:      ["talk", "crm", "financeiro"],
   "empresa-pro": ["talk", "crm", "financeiro", "orquestrador"],
-  suite:        ["talk", "crm", "financeiro", "orquestrador", "media", "operis"],
+  suite:        ["talk", "crm", "financeiro", "orquestrador", "media", "operis", "base"],
+  base:         ["base"],
   operis:       ["operis"],
   media:        ["media"]
 };

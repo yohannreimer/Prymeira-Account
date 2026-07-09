@@ -3,6 +3,13 @@ import type { AccessDecision } from "../access/access.types.js";
 
 export const demoProducts = [
   {
+    product_key: "base",
+    name: "Baase",
+    description: "Company operating base",
+    app_url: "http://localhost:5190",
+    marketing_url: "http://localhost:5175/products/base"
+  },
+  {
     product_key: "media",
     name: "Flowcut",
     description: "Video content studio",

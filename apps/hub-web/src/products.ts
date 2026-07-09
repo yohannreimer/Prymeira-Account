@@ -7,6 +7,7 @@ import {
   LucideIcon,
   Megaphone,
   MessageCircle,
+  Network,
   Settings2,
   ShoppingBag
 } from "lucide-react";
@@ -25,6 +26,12 @@ const fallbackPresentation: ProductPresentation = {
 };
 
 export const productPresentationByKey: Record<string, ProductPresentation> = {
+  base: {
+    accent: "#4f8068",
+    category: "Base operacional",
+    icon: Network,
+    description: "Organize a empresa em áreas, cargos, processos, rotinas, treinamentos e execução diária. O Baase transforma conhecimento operacional em um sistema vivo para donos e equipes."
+  },
   operis: {
     accent: "#3b5b52",
     category: "Segundo cérebro",

@@ -3,6 +3,7 @@ const PLAN_LABELS: Record<string, string> = {
   empresa: "Empresa",
   "empresa-pro": "Empresa Pro",
   suite: "Suite Completa",
+  base: "Baase",
   operis: "Operis",
   media: "Flowcut"
 };

@@ -78,13 +78,21 @@ const PLANS: Plan[] = [
     name: "Suite Completa",
     priceMonthly: 247,
     priceAnnual: 1997,
-    productKeys: ["talk", "crm", "financeiro", "orquestrador", "media", "operis"],
+    productKeys: ["talk", "crm", "financeiro", "orquestrador", "media", "operis", "base"],
     icon: Layers,
     accent: "#8a3f54"
   }
 ];
 
 const SOLOS: SoloPlan[] = [
+  {
+    id: "base",
+    name: "Baase",
+    description: "Base operacional para processos, rotinas, cargos, treinamentos e execução diária.",
+    productKey: "base",
+    priceMonthly: 97,
+    priceAnnual: 797
+  },
   {
     id: "operis",
     name: "Operis",
@@ -109,7 +117,8 @@ const PRODUCT_NAMES: Record<string, string> = {
   financeiro: "Financeiro",
   orquestrador: "Orquestrador",
   media: "Flowcut",
-  operis: "Operis"
+  operis: "Operis",
+  base: "Baase"
 };
 
 // ─── URL helpers ─────────────────────────────────────────────────────────────
