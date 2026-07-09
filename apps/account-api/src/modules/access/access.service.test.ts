@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { evaluateEntitlementAccess } from "./access.service.js";
-import type { AccessEntitlement, AccessProduct } from "./access.types.js";
+import type { AccessCustomer, AccessEntitlement, AccessProduct, AccessWorkspace } from "./access.types.js";
 
 const now = new Date("2026-05-16T12:00:00.000Z");
 
@@ -10,8 +10,14 @@ const product: AccessProduct = {
   marketingUrl: "https://primeiradigital.com.br/operis"
 };
 
-const workspace = {
+const customer: AccessCustomer = {
+  id: "customer-1",
+  name: "Ada Lovelace"
+};
+
+const workspace: AccessWorkspace = {
   id: "workspace-1",
+  name: "Acme Workspace",
   status: "active",
   role: "owner"
 };
@@ -42,7 +48,7 @@ function entitlement(overrides: Partial<AccessEntitlement>): AccessEntitlement {
 
 function evaluate(overrides: Record<string, unknown> = {}) {
   return evaluateEntitlementAccess({
-    hasCustomer: true,
+    customer,
     workspace,
     productSeat,
     product,
@@ -54,7 +60,7 @@ function evaluate(overrides: Record<string, unknown> = {}) {
 
 describe("evaluateEntitlementAccess", () => {
   it("denies when the customer is missing", () => {
-    const result = evaluate({ hasCustomer: false, entitlement: null });
+    const result = evaluate({ customer: null, entitlement: null });
     expect(result).toMatchObject({ allowed: false, reason: "no_customer" });
   });
 
@@ -176,7 +182,10 @@ describe("evaluateEntitlementAccess", () => {
     expect(result).toMatchObject({
       allowed: true,
       workspace_id: "workspace-1",
+      workspace_name: "Acme Workspace",
       workspace_role: "owner",
+      customer_id: "customer-1",
+      customer_name: "Ada Lovelace",
       product_role: "admin",
       seats_limit: 3,
       reason: "active_entitlement",

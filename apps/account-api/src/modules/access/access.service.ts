@@ -1,6 +1,9 @@
 import type {
+  AccessCustomer,
   AccessDecision,
+  AccessDeniedDecision,
   AccessEntitlement,
+  AccessGrantedDecision,
   AccessProduct,
   AccessProductSeat,
   AccessReason,
@@ -8,7 +11,7 @@ import type {
 } from "./access.types.js";
 
 type EvaluateAccessInput = {
-  hasCustomer: boolean;
+  customer: AccessCustomer | null;
   workspace: AccessWorkspace | null;
   workspaceMissingReason?: Extract<AccessReason, "no_workspace" | "no_workspace_membership">;
   productSeat: AccessProductSeat | null;
@@ -20,7 +23,7 @@ type EvaluateAccessInput = {
 export function evaluateEntitlementAccess(input: EvaluateAccessInput): AccessDecision {
   const productKey = input.product?.productKey ?? input.entitlement?.productKey ?? "unknown";
 
-  if (!input.hasCustomer) {
+  if (!input.customer) {
     return deny(productKey, "locked", "no_customer", input.product?.marketingUrl);
   }
 
@@ -104,12 +107,15 @@ export function evaluateEntitlementAccess(input: EvaluateAccessInput): AccessDec
 function allow(
   input: EvaluateAccessInput,
   entitlement: AccessEntitlement,
-  reason: AccessDecision["reason"]
-): AccessDecision {
+  reason: AccessGrantedDecision["reason"]
+): AccessGrantedDecision {
   return {
     allowed: true,
     workspace_id: input.workspace!.id,
+    workspace_name: input.workspace!.name,
     workspace_role: input.workspace!.role,
+    customer_id: input.customer!.id,
+    customer_name: input.customer!.name,
     product_key: entitlement.productKey,
     product_role: input.productSeat!.role,
     status: entitlement.status,
@@ -124,9 +130,9 @@ function allow(
 function deny(
   productKey: string,
   status: string,
-  reason: AccessDecision["reason"],
+  reason: AccessDeniedDecision["reason"],
   upgradeUrl?: string | null
-): AccessDecision {
+): AccessDeniedDecision {
   return {
     allowed: false,
     product_key: productKey,
@@ -138,9 +144,9 @@ function deny(
 
 function denyWithEntitlement(
   entitlement: AccessEntitlement,
-  reason: AccessDecision["reason"],
+  reason: AccessDeniedDecision["reason"],
   upgradeUrl?: string | null
-): AccessDecision {
+): AccessDeniedDecision {
   return {
     allowed: false,
     product_key: entitlement.productKey,

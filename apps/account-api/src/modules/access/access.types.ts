@@ -24,8 +24,14 @@ export type AccessProduct = {
 
 export type AccessWorkspace = {
   id: string;
+  name: string;
   status: string;
   role: string;
+};
+
+export type AccessCustomer = {
+  id: string;
+  name: string | null;
 };
 
 export type AccessProductSeat = {
@@ -49,17 +55,33 @@ export type AccessEntitlement = {
   limits: unknown;
 };
 
-export type AccessDecision = {
-  allowed: boolean;
-  workspace_id?: string;
-  workspace_role?: string;
+export type AccessGrantedDecision = {
+  allowed: true;
+  workspace_id: string;
+  workspace_name: string;
+  workspace_role: string;
+  customer_id: string;
+  customer_name: string | null;
   product_key: string;
-  product_role?: string;
+  product_role: string;
+  status: string;
+  plan: string;
+  source: string;
+  seats_limit: number;
+  limits: unknown;
+  reason: Extract<AccessReason, "active_entitlement" | "internal_access" | "demo_mode">;
+};
+
+export type AccessDeniedDecision = {
+  allowed: false;
+  product_key: string;
   status: string;
   plan?: string;
   source?: string;
   seats_limit?: number;
   limits?: unknown;
-  reason: AccessReason;
+  reason: Exclude<AccessReason, AccessGrantedDecision["reason"]>;
   upgrade_url?: string;
 };
+
+export type AccessDecision = AccessGrantedDecision | AccessDeniedDecision;
