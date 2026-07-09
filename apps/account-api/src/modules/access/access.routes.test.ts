@@ -208,7 +208,10 @@ describe("accessRoutes", () => {
     expect(response.json()).toMatchObject({
       allowed: true,
       workspace_id: workspaceId,
+      workspace_name: "User Workspace",
       workspace_role: "owner",
+      customer_id: customer.id,
+      customer_name: "User",
       product_key: "operis",
       product_role: "admin",
       status: "active",

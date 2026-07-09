@@ -1,5 +1,5 @@
 import type { Env } from "../../env.js";
-import type { AccessDecision } from "../access/access.types.js";
+import type { AccessGrantedDecision } from "../access/access.types.js";
 
 export const demoProducts = [
   {
@@ -71,9 +71,7 @@ export function demoWorkspace(env: Env) {
   };
 }
 
-export function demoAccessDecision(env: Env, productKey: string): AccessDecision {
-  const product = demoProducts.find((item) => item.product_key === productKey);
-
+export function demoAccessDecision(env: Env, productKey: string): AccessGrantedDecision {
   return {
     allowed: true,
     product_key: productKey,
@@ -83,10 +81,12 @@ export function demoAccessDecision(env: Env, productKey: string): AccessDecision
     limits: {},
     seats_limit: demoProducts.length,
     workspace_id: env.DEMO_WORKSPACE_ID,
+    workspace_name: env.DEMO_WORKSPACE_NAME,
     workspace_role: "owner",
+    customer_id: env.DEMO_USER_ID,
+    customer_name: env.DEMO_NAME,
     product_role: "admin",
-    reason: "demo_mode",
-    upgrade_url: product?.marketing_url ?? `${env.VITE_PRYMEIRA_HUB_URL}/products/${productKey}`
+    reason: "demo_mode"
   };
 }
 

@@ -59,7 +59,7 @@ export const accessRoutes: FastifyPluginAsync = async (app) => {
       : null;
 
     return evaluateEntitlementAccess({
-      hasCustomer: Boolean(customer),
+      customer: customer ? { id: customer.id, name: customer.name } : null,
       workspace: workspaceContext.membership ? toAccessWorkspace(workspaceContext.membership) : null,
       workspaceMissingReason: workspaceContext.missingReason,
       productSeat: productSeat ? toAccessProductSeat(productSeat) : null,
@@ -114,7 +114,7 @@ export const accessRoutes: FastifyPluginAsync = async (app) => {
             ])
           : [null, null];
         const decision = evaluateEntitlementAccess({
-          hasCustomer: Boolean(customer),
+          customer: customer ? { id: customer.id, name: customer.name } : null,
           workspace: productWorkspaceContext.membership ? toAccessWorkspace(productWorkspaceContext.membership) : null,
           workspaceMissingReason: productWorkspaceContext.missingReason,
           productSeat: productSeat ? toAccessProductSeat(productSeat) : null,
@@ -154,12 +154,15 @@ export const accessRoutes: FastifyPluginAsync = async (app) => {
           source: decision.source,
           limits: decision.limits,
           seats_limit: decision.seats_limit,
-          workspace_id: decision.workspace_id,
-          workspace_role: decision.workspace_role,
-          product_role: decision.product_role,
           allowed: decision.allowed,
           reason: decision.reason,
-          upgrade_url: decision.upgrade_url
+          ...(decision.allowed
+            ? {
+                workspace_id: decision.workspace_id,
+                workspace_role: decision.workspace_role,
+                product_role: decision.product_role
+              }
+            : { upgrade_url: decision.upgrade_url })
         };
       })
     };
@@ -270,6 +273,7 @@ function toAccessProduct(product: {
 function toAccessWorkspace(membership: WorkspaceMembershipWithWorkspace): AccessWorkspace {
   return {
     id: membership.workspace.id,
+    name: membership.workspace.name,
     status: membership.workspace.status,
     role: membership.role
   };

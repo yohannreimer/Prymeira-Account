@@ -60,6 +60,9 @@ describe("demo account routes", () => {
       allowed: true,
       product_key: "crm",
       workspace_id: "demo_workspace",
+      workspace_name: "Prymeira Demo",
+      customer_id: "demo_user",
+      customer_name: "Usuario Demo",
       reason: "demo_mode"
     });
 
