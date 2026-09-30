@@ -23,9 +23,12 @@ import {
   accountApiUrl,
   fetchAdminSession,
   fetchMyProducts,
+  fetchMyTalkSupervision,
   resolveProductUrl,
   syncCurrentCustomer,
 } from "./api";
+import { TalkSupervisionEntry } from "./TalkSupervisionEntry";
+import { talkSupervisionEntry } from "./talk-supervision-entry";
 import { AdminPanel } from "./AdminPanel";
 import { readCheckoutSuccessQuery } from "./checkout-flow";
 import { LandingPage } from "./LandingPage";
@@ -34,7 +37,7 @@ import { formatPlanLabel, formatProductLabel, formatRoleLabel, formatWorkspaceTy
 import { resolveProductDescription } from "./product-card-copy";
 import { readProductPresentation } from "./products";
 import { shouldRenderPublicLanding } from "./public-routing";
-import type { AccountProductAccess, AccountProductsResponse } from "./types";
+import type { AccountProductAccess, AccountProductsResponse, TalkSupervisionGrant } from "./types";
 import logomark from "./assets/prymeira-selo.png";
 import logotype from "./assets/prymeira-logo.png";
 import "./styles.css";
@@ -374,6 +377,8 @@ function Hub() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [supervisionGrants, setSupervisionGrants] = useState<TalkSupervisionGrant[]>([]);
+  const [supervisionError, setSupervisionError] = useState<string | null>(null);
   const [{ checkoutSuccess, planId: checkoutPlanId }] = useState(() =>
     readCheckoutSuccessQuery(window.location.search)
   );
@@ -433,6 +438,19 @@ function Hub() {
     };
   }, [getToken]);
 
+  useEffect(() => {
+    let active = true;
+    setSupervisionGrants([]); setSupervisionError(null);
+    getToken().then((token) => {
+      if (!token) throw new Error("Sessão sem token.");
+      return fetchMyTalkSupervision(token);
+    }).then((response) => { if (active) setSupervisionGrants(response.grants); })
+      .catch(() => { if (active) setSupervisionError("Não foi possível verificar a supervisão do Talk. Atualize para tentar novamente."); });
+    return () => { active = false; };
+  }, [getToken, user?.id]);
+
+  const supervisionUrl = talkSupervisionEntry(data?.products ?? [], supervisionGrants,
+    resolveProductUrl("talk", data?.products.find((product) => product.product_key === "talk")?.app_url));
   const groups = useMemo(() => productGroups(data?.products ?? []), [data]);
   const activeCount = data?.products.filter((p) => p.allowed).length ?? 0;
   const trialCount = data?.products.filter((p) => !p.allowed && p.status === "trial").length ?? 0;
@@ -620,6 +638,8 @@ function Hub() {
               <span>Nenhum produto cadastrado para exibir.</span>
             </div>
           )}
+          {supervisionError && <div className="state-card state-card--error" role="alert">{supervisionError}</div>}
+          {supervisionUrl && <TalkSupervisionEntry href={supervisionUrl} sellerCount={new Set(supervisionGrants.map((grant) => grant.seller_customer_id)).size} />}
           {groups.map((group) => (
             <section className="product-section" key={group.title}>
               <div className="section-hd">

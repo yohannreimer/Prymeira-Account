@@ -20,6 +20,8 @@ model Customer {
   ownedWorkspaces   Workspace[]              @relation("WorkspaceOwner")
   workspaceMembers  WorkspaceMember[]
   productSeats      WorkspaceProductMember[]
+  supervisionGrants TalkSupervisionGrant[] @relation("TalkSupervisor")
+  supervisedGrants  TalkSupervisionGrant[] @relation("TalkSeller")
 
   @@map("customers")
 }
@@ -55,6 +57,7 @@ model Workspace {
   productMembers  WorkspaceProductMember[]
   entitlements    Entitlement[]
   invitations     Invitation[]
+  supervisionGrants TalkSupervisionGrant[]
 
   @@index([ownerCustomerId])
   @@map("workspaces")
@@ -173,4 +176,26 @@ model AuditLog {
   @@index([targetType, targetId, createdAt])
   @@index([actorClerkUserId, createdAt])
   @@map("audit_logs")
+}
+
+model TalkSupervisionGrant {
+  id                   String    @id @default(uuid()) @db.Uuid
+  supervisorCustomerId String    @map("supervisor_customer_id") @db.Uuid
+  sellerCustomerId     String    @map("seller_customer_id") @db.Uuid
+  workspaceId          String    @map("workspace_id") @db.Uuid
+  channelId            String    @map("channel_id") @db.Uuid
+  channelDisplayName   String?   @map("channel_display_name")
+  channelPhoneNumber   String?   @map("channel_phone_number")
+  status               String    @default("active")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+  revokedAt            DateTime? @map("revoked_at")
+  supervisor           Customer  @relation("TalkSupervisor", fields: [supervisorCustomerId], references: [id], onDelete: Cascade)
+  seller               Customer  @relation("TalkSeller", fields: [sellerCustomerId], references: [id], onDelete: Cascade)
+  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([supervisorCustomerId, workspaceId, channelId])
+  @@index([supervisorCustomerId, status])
+  @@index([sellerCustomerId, workspaceId])
+  @@map("talk_supervision_grants")
 }

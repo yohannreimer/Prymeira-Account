@@ -36,7 +36,7 @@ jobs:
           file: apps/account-api/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ env.OWNER }}/prymeira-account-api:latest
+            ${{ github.event_name == 'push' && format('ghcr.io/{0}/prymeira-account-api:latest', env.OWNER) || '' }}
             ghcr.io/${{ env.OWNER }}/prymeira-account-api:${{ github.sha }}
 
       - name: Build and push Hub Web
@@ -46,5 +46,5 @@ jobs:
           file: apps/hub-web/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ env.OWNER }}/prymeira-hub-web:latest
+            ${{ github.event_name == 'push' && format('ghcr.io/{0}/prymeira-hub-web:latest', env.OWNER) || '' }}
             ghcr.io/${{ env.OWNER }}/prymeira-hub-web:${{ github.sha }}
