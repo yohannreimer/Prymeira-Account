@@ -9,6 +9,7 @@ const envSchema = z
     CLERK_SECRET_KEY: z.string().min(1),
     CLERK_PUBLISHABLE_KEY: z.string().min(1).optional(),
     CLERK_WEBHOOK_SIGNING_SECRET: z.string().default(""),
+    TALK_API_URL: z.string().url().optional(),
     ADMIN_EMAILS: z.string().default(""),
     ADMIN_ACTION_TOKEN: z.string().default(""),
     CORS_ORIGINS: z.string().default(""),
