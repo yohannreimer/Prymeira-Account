@@ -48,3 +48,6 @@ jobs:
           tags: |
             ${{ github.event_name == 'push' && format('ghcr.io/{0}/prymeira-hub-web:latest', env.OWNER) || '' }}
             ghcr.io/${{ env.OWNER }}/prymeira-hub-web:${{ github.sha }}
+
+      - name: Validate web server configuration
+        run: docker run --rm --add-host prymeira_account_api:127.0.0.1 ghcr.io/${{ env.OWNER }}/prymeira-hub-web:${{ github.sha }} nginx -t
