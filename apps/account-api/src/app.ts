@@ -14,6 +14,7 @@ import { checkoutRoutes } from "./modules/checkout/checkout.routes.js";
 import { customersRoutes } from "./modules/customers/customers.routes.js";
 import { plansRoutes } from "./modules/plans/plans.routes.js";
 import { prismaPlugin } from "./plugins/prisma.js";
+import { supervisionRoutes } from "./modules/supervision/supervision.routes.js";
 import { teamRoutes } from "./modules/team/team.routes.js";
 import { webhookRoutes } from "./modules/webhook/webhook.routes.js";
 
@@ -116,6 +117,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
   await app.register(accessRoutes);
   await app.register(adminRoutes);
   await app.register(teamRoutes);
+  await app.register(supervisionRoutes);
   await app.register(checkoutRoutes);
   await app.register(plansRoutes);
   await app.register(webhookRoutes);

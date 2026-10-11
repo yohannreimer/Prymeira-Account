@@ -1443,3 +1443,9 @@ img { display: block; max-width: 100%; }
   .hub-hero__metrics { grid-template-columns: repeat(2, 1fr); }
   .product-grid, .product-grid--2 { grid-template-columns: 1fr; }
 }
+
+.talk-supervision-admin { display: flex; flex-direction: column; gap: 12px; }
+.talk-supervision-admin p { font-size: 12px; color: var(--muted); margin: 0; }
+.talk-supervision-admin form { display: flex; flex-direction: column; gap: 8px; }
+.talk-supervision-grants { display: flex; flex-direction: column; gap: 12px; }
+.talk-supervision-grant { display: flex; flex-direction: column; gap: 5px; font-size: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; overflow-wrap: anywhere; }

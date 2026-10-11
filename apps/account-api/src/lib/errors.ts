@@ -6,6 +6,8 @@ export type ApiErrorCode =
   | "VALIDATION_ERROR"
   | "NOT_FOUND"
   | "CONFLICT"
+  | "INVALID_CHANNEL"
+  | "TALK_UNAVAILABLE"
   | "INTERNAL_ERROR";
 
 export class ApiError extends Error {

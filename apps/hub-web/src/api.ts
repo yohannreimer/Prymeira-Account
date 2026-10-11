@@ -230,3 +230,28 @@ export async function createCheckoutSession(
 
   return response.json() as Promise<{ checkout_url: string }>;
 }
+
+export function fetchMyTalkSupervision(token: string) {
+  return adminFetch<{ grants: import("./types").TalkSupervisionGrant[] }>(token, "/me/talk-supervision", { cache: "no-store" });
+}
+export function fetchTalkSupervisionSources(token: string, sellerId: string) {
+  return adminFetch<{ workspaces: { id: string; name: string }[] }>(token, `/admin/talk-supervision/sources?seller_customer_id=${encodeURIComponent(sellerId)}`);
+}
+export function fetchTalkSupervisionChannels(token: string, sellerId: string, workspaceId: string) {
+  return adminFetch<{ channels: import("./types").TalkChannel[] }>(token, `/admin/talk-supervision/channels?seller_customer_id=${encodeURIComponent(sellerId)}&workspace_id=${encodeURIComponent(workspaceId)}`);
+}
+export function fetchTalkSupervisionGrants(token: string, supervisorId: string) {
+  return adminFetch<{ grants: import("./types").AdminTalkGrant[] }>(token, `/admin/talk-supervision/grants?supervisor_customer_id=${encodeURIComponent(supervisorId)}`);
+}
+export function createTalkSupervisionGrant(token: string, actionToken: string, payload: {
+  supervisor_customer_id: string; seller_customer_id: string; workspace_id: string; channel_id: string;
+}) {
+  return adminFetch(token, "/admin/talk-supervision/grants", {
+    method: "POST", headers: actionHeaders(actionToken), body: JSON.stringify(payload)
+  });
+}
+export function revokeTalkSupervisionGrant(token: string, actionToken: string, id: string) {
+  return adminFetch(token, `/admin/talk-supervision/grants/${encodeURIComponent(id)}/revoke`, {
+    method: "POST", headers: actionHeaders(actionToken)
+  });
+}

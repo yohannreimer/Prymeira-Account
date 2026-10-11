@@ -1,3 +1,4 @@
+import { TalkSupervisionAdmin } from "./TalkSupervisionAdmin";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { UserButton, useAuth, useUser } from "@clerk/clerk-react";
 import {
@@ -673,6 +674,8 @@ export function AdminPanel() {
                   </table>
                 </div>
               )}
+
+              <TalkSupervisionAdmin key={customer.id} supervisor={customer} actionToken={actionToken} />
 
               {/* Members */}
               {workspace && workspace.members.length > 0 && (

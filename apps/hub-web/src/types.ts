@@ -145,3 +145,21 @@ export type AdminCustomerDetailResponse = {
   customer: AdminCustomerDetail | null;
   audit_logs: AdminAuditLog[];
 };
+
+export type TalkSupervisionGrant = {
+  id: string;
+  supervisor_customer_id: string;
+  seller_customer_id: string;
+  seller_name: string;
+  seller_email: string;
+  workspace_id: string;
+  channel_id: string;
+};
+export type TalkChannel = { id: string; workspaceId: string; displayName: string; phoneNumber: string | null };
+export type AdminTalkGrant = {
+  id: string; supervisorCustomerId: string; sellerCustomerId: string; workspaceId: string; channelId: string;
+  status: string; createdAt: string; revokedAt: string | null;
+  channelDisplayName: string | null; channelPhoneNumber: string | null;
+  seller: { id: string; name: string | null; email: string };
+  workspace: { id: string; name: string };
+};
