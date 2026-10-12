@@ -54,5 +54,5 @@ jobs:
 
       - name: Validate analytics on all public HTML pages
         run: |
-          node --test scripts/test-site-analytics.mjs
+          node --test scripts/test-site-analytics.mjs scripts/test-page-motion.mjs scripts/test-site-assets.mjs
           bash scripts/test-site-nginx.sh ghcr.io/${{ env.OWNER }}/prymeira-hub-web:${{ github.sha }}

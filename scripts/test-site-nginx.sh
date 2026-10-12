@@ -39,6 +39,18 @@ for(const host of ['www.prymeiradigital.com.br','prymeiradigital.com.br']) {
 }
 const pdf=await get('/_analytics_test/file.pdf','www.prymeiradigital.com.br');
 assert.equal(pdf.status,200);assert.doesNotMatch(pdf.body,/analytics\.js/);
+const asset=await get('/page-motion.js','www.prymeiradigital.com.br');
+assert.match(asset.headers['cache-control'],/max-age=604800/);
+for(const path of ['/analytics.js','/site-config.js','/privacidade.html']) {
+ const response=await get(path,'www.prymeiradigital.com.br');
+ assert.match(response.headers['cache-control'],/no-cache/);
+}
+const compressed=await new Promise((resolve,reject)=>{
+ const req=http.get({hostname:'127.0.0.1',port:18767,path:'/',headers:{Host:'www.prymeiradigital.com.br','Accept-Encoding':'gzip'}},res=>{res.resume();res.on('end',()=>resolve(res));});req.on('error',reject);
+});
+assert.equal(compressed.headers['content-encoding'],'gzip');
+assert.match(compressed.headers['content-security-policy'],/https:\/\/\*\.clarity\.ms/);
+console.log('PASS compression, cache and public security headers');
 const hub=await get('/','hub.prymeiradigital.com.br');
 assert.equal(hub.status,200);assert.doesNotMatch(hub.body,/analytics\.js|clarity\.ms/);
 console.log('PASS PDF and Hub isolation');
