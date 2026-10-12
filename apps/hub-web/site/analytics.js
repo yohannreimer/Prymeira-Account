@@ -7,7 +7,17 @@
   window.prymeiraAnalytics = { track: function (name) {
     if (enabled && allowedEvents.indexOf(name) !== -1 && typeof window.clarity === "function") window.clarity("event", name);
   } };
-  if (!enabled) return;
+  if (!enabled || window.prymeiraClarityStarted) return;
+  window.prymeiraClarityStarted = true;
+
+  // Mask forms on every page before Clarity loads, including dynamically added fields.
+  function maskForms() {
+    document.querySelectorAll("form, input, textarea, select, [contenteditable]").forEach(function (element) {
+      if (element.getAttribute("data-clarity-mask") !== "true") element.setAttribute("data-clarity-mask", "true");
+    });
+  }
+  maskForms();
+  new MutationObserver(maskForms).observe(document.body, { childList: true, subtree: true });
 
   // Discard legacy choices and cookies; a prior acceptance must not enable storage.
   try { localStorage.removeItem("prymeira-analytics-consent-v1"); } catch (error) {}

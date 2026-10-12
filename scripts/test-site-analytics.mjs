@@ -5,17 +5,19 @@ import { test } from 'node:test';
 const source = readFileSync(new URL('../apps/hub-web/site/analytics.js', import.meta.url), 'utf8');
 function fixture(preference, storageFails = false, hostname = "www.prymeiradigital.com.br") {
   const scripts = [], cookieWrites = [], buttons = {};
+  const fields = [{ attrs: {}, getAttribute(key) { return this.attrs[key]; }, setAttribute(key,value) { this.attrs[key]=value; } }];
+  let mutationCallback;
   const storage = new Map(preference === undefined ? [] : [['prymeira-analytics-consent-v1', JSON.stringify(preference)]]);
   let reloads = 0;
   const button = key => buttons[key] ??= { addEventListener(type, fn) { this[type] = fn; }, focus() {} };
-  const context = { window: {}, location: { hostname, reload() { reloads++; } },
+  const context = { MutationObserver: class { constructor(fn) { mutationCallback=fn; } observe() {} }, window: {}, location: { hostname, reload() { reloads++; } },
     localStorage: { getItem(key) { if (storageFails) throw Error('Blocked'); return storage.get(key); }, removeItem(key) { if (storageFails) throw Error('Blocked'); storage.delete(key); } },
     document: { head: { appendChild(el) { scripts.push(el); } }, body: { appendChild(el) { this.notice = el; } },
       createElement() { return { setAttribute() {}, querySelector(selector) { return button(selector); } }; },
-      querySelectorAll() { return [button('preferences')]; }, set cookie(value) { cookieWrites.push(value); } }
+      querySelectorAll() { return fields; }, set cookie(value) { cookieWrites.push(value); } }
   };
   vm.runInNewContext(source, context);
-  return { context, scripts, cookieWrites, storage, buttons, reloads: () => reloads,
+  return { fields, mutate: () => mutationCallback(), context, scripts, cookieWrites, storage, buttons, reloads: () => reloads,
     click(key) { button(key).click(); }, calls() { return (context.window.clarity?.q ?? []).map(args => JSON.parse(JSON.stringify(Array.from(args)))); } };
 }
 test('loads automatically with both storage permissions denied before the tracker request', () => {
@@ -47,7 +49,7 @@ test('blocked storage does not prevent loading; events never forward form values
 test('form and personalized result stay masked, with no consent UI or obsolete stylesheet', () => {
   const html = readFileSync(new URL('../apps/hub-web/site/index.html', import.meta.url), 'utf8');
   for (const id of ['form', 'note', 'done']) assert.match(html, new RegExp(`id="${id}" data-clarity-mask="true"`));
-  assert.match(html, /analytics\.js" defer/);
+  assert.doesNotMatch(html, /<script src="analytics\.js"/);
   assert.match(html, /window\.prymeiraAnalytics\.track\(name\)/);
   assert.doesNotMatch(html, /data-analytics-preferences|analytics\.css/);
   const privacy = readFileSync(new URL('../apps/hub-web/site/privacidade.html', import.meta.url), 'utf8');
@@ -63,4 +65,22 @@ test('only both public site domains load tracking; previews and Hub stay exclude
     assert.deepEqual(f.calls(), []);
     assert.equal(f.cookieWrites.length, 0);
   }
+});
+
+test('all page forms and dynamic fields are masked before tracking', () => {
+  const f = fixture();
+  assert.equal(f.fields[0].attrs['data-clarity-mask'], 'true');
+  const added = { attrs: {}, getAttribute(key) { return this.attrs[key]; }, setAttribute(key,value) { this.attrs[key]=value; } };
+  f.fields.push(added); f.mutate();
+  assert.equal(added.attrs['data-clarity-mask'], 'true');
+  vm.runInNewContext(source, f.context);
+  assert.equal(f.scripts.length, 1);
+});
+test('public server injects root-relative tracker; Hub stays isolated and Clarity CSP is allowed', () => {
+  const nginx = readFileSync(new URL('../apps/hub-web/nginx.conf', import.meta.url), 'utf8');
+  const [hub, site] = nginx.split('server_name prymeiradigital.com.br');
+  assert.doesNotMatch(hub, /sub_filter|clarity\.ms/);
+  assert.match(site, /sub_filter '<\/head>' '<script src="\/analytics\.js" defer><\/script><\/head>'/);
+  assert.match(site, /connect-src[^;]*https:\/\/\*\.clarity\.ms/);
+  assert.match(site, /script-src[^;]*https:\/\/\*\.clarity\.ms/);
 });

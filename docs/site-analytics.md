@@ -1,11 +1,15 @@
 # Análise do site Prymeira
 
 Projeto Microsoft Clarity: Prymeira Digital (`ywkt0aw2m2`).
-Escopo: `www.prymeiradigital.com.br` e `prymeiradigital.com.br`, somente a página pública. Hub, Talk e previews locais não recebem este tracker.
+Escopo: `www.prymeiradigital.com.br` e `prymeiradigital.com.br`, todas as páginas HTML públicas. Hub, Talk e previews locais não recebem este tracker.
 
 O Clarity carrega automaticamente, sem banner e sem cookies, com `consentv2` negando tanto `analytics_Storage` quanto `ad_Storage` antes de inserir o script. Preferências antigas são removidas e os cookies locais `_clck`/`_clsk` da configuração anterior são expirados. No projeto, cookies automáticos ficam desativados; mascaramento equilibrado e detecção de bots mantidos.
 
 Cada visualização tem identificação própria, sem continuidade persistente entre páginas ou visitas. Visitantes recorrentes, sessões, tempo e funis entre páginas têm limitações; bloqueadores podem impedir coleta. Não interpretar o painel como cobertura de 100% dos visitantes.
+
+O Nginx injeta `/analytics.js` em cada resposta HTML do servidor público, antes de `</head>`. Páginas novas devem usar HTML completo com esse fechamento, sem inserir outro código do Clarity; não precisam cadastrar URL no painel. `/isca` também resolve um arquivo `isca.html` ou uma pasta `isca/index.html`. PDF e arquivos de mídia não recebem tracker. O servidor do Hub não recebe injeção.
+
+O script mascara automaticamente formulários e campos editáveis antes de iniciar a análise e também acompanha novos campos adicionados ao DOM. Textos personalizados fora de formulários devem usar `data-clarity-mask="true"`.
 
 O formulário, a confirmação personalizada e a área de retorno usam `data-clarity-mask`. Não usamos Identify nem encaminhamos propriedades do formulário, dados do lead ou UTMs nos eventos personalizados.
 
@@ -23,3 +27,5 @@ Clarity fornece mapas de calor e gravações de navegação com as limitações 
 
 Teste de regressão: `node --test scripts/test-site-analytics.mjs`.
 Documentação: https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-consent-api-v2 e https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-masking.
+
+Validação real de respostas Nginx (CI): `bash scripts/test-site-nginx.sh <imagem>`. Verifica página inicial, privacidade, subpágina futura aninhada, PDF e isolamento do Hub.
