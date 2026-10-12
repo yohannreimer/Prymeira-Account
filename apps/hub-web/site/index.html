@@ -586,7 +586,7 @@
       <div class="panel">
         <h2 class="sc-display">Agende seu Raio-X grátis</h2>
         <p>15 minutos comigo, por Meet, Zoom ou WhatsApp. Você sai sabendo por onde a IA entra na sua empresa.</p>
-        <form class="form" id="form" method="post" action="#" novalidate>
+        <form class="form" id="form" data-clarity-mask="true" method="post" action="#" novalidate>
           <label for="f-nome">Seu nome<input id="f-nome" name="nome" autocomplete="name" required></label>
           <label for="f-whats">WhatsApp<input id="f-whats" name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" required pattern="[0-9\(\)\+\s\-]{10,}"></label>
           <label for="f-empresa">Empresa (opcional)<input id="f-empresa" name="empresa" autocomplete="organization"></label>
@@ -602,11 +602,11 @@
           </label>
           <div class="full"><span class="kicker" style="margin-bottom:.4rem">Sua equipe</span><div class="chosen" id="chosen">Nenhum agente escolhido. É opcional.</div></div>
           <button class="btn" type="submit" data-track="cta_form">Quero meu Raio-X grátis</button>
-          <p class="form__note" id="note">Em poucos minutos a gente te chama no WhatsApp pra marcar o horário. Ao enviar, você aceita esse contato.</p>
+          <p class="form__note" id="note" data-clarity-mask="true">Em poucos minutos a gente te chama no WhatsApp pra marcar o horário. Ao enviar, você aceita esse contato.</p>
         </form>
-        <div class="done" id="done" hidden aria-live="polite"><b>Recebido, <span id="done-name"></span>!</b><p>Em poucos minutos a gente te chama no WhatsApp pra marcar o horário do seu Raio-X. Fica de olho no celular.</p></div>
+        <div class="done" id="done" data-clarity-mask="true" hidden aria-live="polite"><b>Recebido, <span id="done-name"></span>!</b><p>Em poucos minutos a gente te chama no WhatsApp pra marcar o horário do seu Raio-X. Fica de olho no celular.</p></div>
       </div>
-      <footer class="foot"><img src="assets/logo-prymeira.webp" width="480" height="123" alt="Prymeira">Empresas agênticas · Joinville, SC<br>Pinturas de Michelangelo, Ticiano, Rafael e Jacques-Louis David (domínio público), reinterpretadas.<br><a href="privacidade.html">Privacidade da integração de agenda</a></footer>
+      <footer class="foot"><img src="assets/logo-prymeira.webp" width="480" height="123" alt="Prymeira">Empresas agênticas · Joinville, SC<br>Pinturas de Michelangelo, Ticiano, Rafael e Jacques-Louis David (domínio público), reinterpretadas.<br><a href="privacidade.html">Privacidade</a></footer>
     </div>
   </section>
 
@@ -706,14 +706,20 @@ ScrollCraft.mount(document.body);
   function track(name, data) {
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push(Object.assign({ event: name }, utm, data || {}));
+    if (window.prymeiraAnalytics) window.prymeiraAnalytics.track(name);
   }
   document.addEventListener("click", function (e) {
     var a = e.target.closest("a[data-track]"); if (a) track(a.dataset.track);
+  });
+  var formStarted = false;
+  document.getElementById("form").addEventListener("focusin", function () {
+    if (!formStarted) { formStarted = true; track("raiox_form_started"); }
   });
   document.getElementById("form").addEventListener("submit", function (e) {
     e.preventDefault();
     var f = e.target, note = document.getElementById("note");
     if (!f.checkValidity()) {
+      track("lead_validation_error");
       var bad = f.querySelector(":invalid"); if (bad) bad.focus();
       f.classList.add("tried");
       note.textContent = "Preencha os campos marcados em vermelho.";
@@ -739,6 +745,7 @@ ScrollCraft.mount(document.body);
     track("lead_submit", { faturamento: d.get("faturamento"), dor: d.get("dor"), equipe: team.join(",") });
     var href = "https://wa.me/" + WHATSAPP + "?text=" + encodeURIComponent(lines.join("\n"));
     function planB() {
+      track("lead_delivery_failed");
       btn.disabled = false; btn.textContent = "Quero meu Raio-X grátis";
       note.innerHTML = 'Não conseguimos enviar agora. <a href="' + href + '" target="_blank" rel="noopener">Me chame no WhatsApp</a> com a mensagem pronta.';
     }
