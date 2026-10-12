@@ -1,0 +1,11 @@
+.analytics-choice { position: fixed; z-index: 100; left: 1rem; right: 1rem; bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); max-width: 60rem; margin: auto; padding: 1rem 1.25rem; display: flex; align-items: center; gap: 1.5rem; background: #ede5d6; color: #1d1813; border: 1px solid #bcb09d; border-radius: .75rem; box-shadow: 0 6px 30px #17130f33; font: 400 .875rem/1.5 "Geist", system-ui, sans-serif; }
+.analytics-choice[hidden] { display: none; }
+.analytics-choice strong { font-weight: 600; }
+.analytics-choice p { margin: .25rem 0 0; }
+.analytics-choice a { color: #24409a; }
+.analytics-choice__actions { display: flex; flex-shrink: 0; gap: .5rem; }
+.analytics-choice button { padding: .65rem .85rem; border: 1px solid #24409a; border-radius: .35rem; background: transparent; color: #24409a; font: inherit; cursor: pointer; }
+.analytics-choice button[data-choice="accept"] { background: #24409a; color: #f4f1ea; }
+.analytics-choice button:focus-visible, .analytics-preferences:focus-visible { outline: 2px solid #24409a; outline-offset: 3px; }
+.analytics-preferences { padding: 0; border: 0; background: transparent; color: inherit; text-decoration: underline; font: inherit; cursor: pointer; }
+@media (max-width: 640px) { .analytics-choice { align-items: stretch; flex-direction: column; gap: .75rem; padding: 1rem; } .analytics-choice__actions { flex-wrap: wrap; } .analytics-choice__actions button { flex: 1; } }
