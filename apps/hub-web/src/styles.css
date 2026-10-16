@@ -1443,3 +1443,20 @@ img { display: block; max-width: 100%; }
   .hub-hero__metrics { grid-template-columns: repeat(2, 1fr); }
   .product-grid, .product-grid--2 { grid-template-columns: 1fr; }
 }
+
+.admin-field__label { font-size: 11px; font-weight: 600; color: var(--dim); }
+.admin-addon {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  cursor: pointer;
+}
+.admin-addon:has(input:checked) { border-color: var(--gold); }
+.admin-addon input { margin-top: 2px; accent-color: var(--gold); }
+.admin-addon span { display: flex; flex-direction: column; gap: 2px; }
+.admin-addon b { font-size: 12px; font-weight: 600; color: var(--ink); }
+.admin-addon small { font-size: 11px; color: var(--muted); }
