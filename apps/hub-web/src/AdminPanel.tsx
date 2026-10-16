@@ -34,6 +34,7 @@ import {
   formatWorkspaceTypeLabel,
   planOptions,
 } from "./labels";
+import { enabledAddons, limitsWithAddons, productAddons } from "./product-addons";
 import logomark from "./assets/prymeira-selo.png";
 import logotype from "./assets/prymeira-logo.png";
 import type {
@@ -221,6 +222,13 @@ export function AdminPanel() {
     () => selectedWorkspace(customer, selectedWorkspaceId),
     [customer, selectedWorkspaceId],
   );
+  const currentEntitlement = workspace?.entitlements.find((ent) => ent.productKey === productKey) ?? null;
+  const addons = productAddons(productKey);
+  const [addonSelection, setAddonSelection] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    setAddonSelection(enabledAddons(productKey, currentEntitlement?.limits));
+  }, [productKey, currentEntitlement?.id, currentEntitlement?.limits]);
+
   const customerProductSeatByKey = useMemo(() => {
     const seats = new Map<string, AdminWorkspace["productMembers"][number]>();
 
@@ -334,7 +342,7 @@ export function AdminPanel() {
           source,
           plan,
           seats_limit: seatsLimit,
-          limits: {},
+          limits: limitsWithAddons(productKey, currentEntitlement?.limits, addonSelection),
           metadata: {},
         }),
       );
@@ -633,6 +641,13 @@ export function AdminPanel() {
                                   <KeyRound size={13} aria-hidden="true" />
                                 </div>
                                 <span className="admin-ent-name">{productLabel(ent.productKey)}</span>
+                                {productAddons(ent.productKey)
+                                  .filter((addon) => enabledAddons(ent.productKey, ent.limits)[addon.key])
+                                  .map((addon) => (
+                                    <span className="status-pill status-pill--active" key={addon.key}>
+                                      + {addon.label}
+                                    </span>
+                                  ))}
                               </div>
                             </td>
                             <td>
@@ -952,6 +967,26 @@ export function AdminPanel() {
                 onChange={(e) => setSeatsLimit(Number(e.target.value))}
               />
             </div>
+            {addons.length > 0 && (
+              <div className="admin-field">
+                <span className="admin-field__label">Adicionais</span>
+                {addons.map((addon) => (
+                  <label className="admin-addon" key={addon.key}>
+                    <input
+                      type="checkbox"
+                      checked={addonSelection[addon.key] === true}
+                      onChange={(e) =>
+                        setAddonSelection((current) => ({ ...current, [addon.key]: e.target.checked }))
+                      }
+                    />
+                    <span>
+                      <b>{addon.label}</b>
+                      <small>{addon.description}</small>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
             <button
               className="admin-action-btn admin-action-btn--gold"
               type="submit"
